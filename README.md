@@ -27,6 +27,7 @@ It requires more optimizations:
 4. To change it to FOV-simulation, you need to add half-arcs of visible space which would connect raycasts andings. For now,
    visibility-polygon is cut straightly.
 5. Maybe some work could be done with multithreading or multiprocessing, but I did not work it out yet.
+6. Unfortunatelly, my algorithm suffers for the same problems which Amit Patel from Red Blob Games blog reports: robustness      problems which causes generation of some invalid, falsely-dark triangles. I was only able to get rid of small part of        them. I suppose, there is no easy way to fix this, and I can only send you to the same source treating about this problem,    that Amit reccomends: https://github.com/mikolalysenko/robust-arithmetic-notes
 
 To be done:
 
