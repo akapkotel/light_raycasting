@@ -28,6 +28,7 @@ It requires more optimizations:
    visibility-polygon is cut straightly.
 5. Maybe some work could be done with multithreading or multiprocessing, but I did not work it out yet.
 6. Unfortunatelly, my algorithm suffers for the same problems which Amit Patel from Red Blob Games blog reports: robustness      problems which causes generation of some invalid, falsely-dark triangles. I was only able to get rid of small part of        them. I suppose, there is no easy way to fix this, and I can only send you to the same source treating about this problem,    that Amit reccomends: https://github.com/mikolalysenko/robust-arithmetic-notes
+7. Maybe I shgould use another algorithm - triangle-expanding alforithm described in the PDF file added to this repository.
 
 To be done:
 
