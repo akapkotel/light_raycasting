@@ -34,5 +34,7 @@ To be done:
 2. Customization: changing amount and positioning of obstacles.
 
 If anyone has ideas how to make this algorithm better (fasetr), please, notice me, fork and make pull-requests.
+
 ----
+
 Rafał "Akapkotel" Trąbski
