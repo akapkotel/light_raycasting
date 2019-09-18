@@ -55,7 +55,7 @@ class Wall:
     """
 
     count = 0
-    __slots__ = ("id", "points", "a", "b", "line")
+    __slots__ = ("id", "points", "a", "b", "line", "centroid")
 
     def __init__(self, a: tuple, b: tuple):
         """
@@ -71,6 +71,7 @@ class Wall:
         self.a = a
         self.b = b
         self.line = LineString([self.a, self.b])
+        self.centroid = self.line.centroid
 
     def __str__(self):
         return f"Wall (id: {self.id}, endpoints: {self.a, self.b})"
@@ -214,14 +215,13 @@ class Light:
 
         Algorithm inspired by: https://www.redblobgames.com/articles/visibility/
         """
-        walls = [LineString(w.line) for w in self.walls.values()]
+        walls = [w for w in self.walls.values()]
         endpoints = self.endpoints
         origin = (self.x, self.y)
-        max_range = self.power
 
         endpoints.sort(key=lambda e_: calculate_angle(origin, e_.position))
 
-        rays = self.cast_rays(endpoints, origin, max_range)
+        rays = self.cast_rays(endpoints, origin, max_range=self.power)
 
         walls.sort(key=lambda w: distance_2d((w.centroid.x, w.centroid.y), origin))
 
@@ -229,18 +229,22 @@ class Light:
         colliding_rays = []
         for ray in rays:
             r1, r2 = ray[0], ray[1]
-            line = LineString((ray[0], ray[1]))
+
+            r3 = ray[2] if len(ray) == 4 else None
+            r4 = ray[3] if len(ray) == 4 else None
+
+            line = LineString((r1, r2))
 
             colliding_wall = None
             for wall in walls:  # TODO (2): find cheaper way to detect this:
-                if line.crosses(wall):
-                    colliding_wall = list(wall.coords)
+
+                if wall.id not in (r3, r4) and line.crosses(wall.line):
+                    colliding_wall = list(wall.line.coords)
                     break
 
             if colliding_wall is not None:
                 w1, w2 = colliding_wall[0], colliding_wall[1]
                 i = self.get_intersection(r1, r2, w1, w2)
-
                 new_ray = (origin, i)
                 rays.append(new_ray)
                 colliding_rays.append(ray)
@@ -278,7 +282,7 @@ class Light:
             position = endpoint.position
             angle = calculate_angle(origin, position)
             # parent ray:
-            ray = (origin, position)
+            ray = (origin, position, begins, ends)
             # additional rays to search behind the corners:
             offset_ray_a = None
             offset_ray_b = None
@@ -337,11 +341,11 @@ class Light:
                     offset_ray_b = (origin, end_b)
 
             if offset_ray_a is not None:
-                rays.append(offset_ray_a)
+                rays.append(offset_ray_a + (begins, ends))
             if offset_ray_b is not None:
-                rays.append(offset_ray_b)
+                rays.append(offset_ray_b + (begins, ends))
             if (origin, (0.0, 0.0)) not in rays:  # temporary fix for (3)
-                rays.append((origin, (0.0, 0.0)))
+                rays.append((origin, (0.0, 0.0), None, None))
 
         return rays
 
@@ -367,12 +371,58 @@ class Light:
         :param p4: tuple -- second point of second segment
         :return: tuple -- position of intersection
         """
-        p_ = p4[0] - p3[0]
-        p_0 = (p1[1] - p3[1])
-        p_1 = (p4[1] - p3[1])
-        p_2 = (p1[0] - p3[0])
-        p_3 = (p2[0] - p1[0])
-        p_4 = (p2[1] - p1[1])
+        x_0 = (p1[1] - p3[1])
+        x_1 = (p4[1] - p3[1])
+        x_2 = (p1[0] - p3[0])
+        x_3 = (p2[0] - p1[0])
+        x_4 = (p2[1] - p1[1])
+        x_5 = p4[0] - p3[0]
 
-        s = ((p_ * p_0 - p_1 * p_2) / (p_1 * p_3 - p_ * p_4))
-        return p1[0] + s * p_3, p1[1] + s * p_4
+        s = ((x_5 * x_0 - x_1 * x_2) / (x_1 * x_3 - x_5 * x_4))
+        return p1[0] + s * x_3, p1[1] + s * x_4
+
+    # calculates the cross product of vector p1 and p2
+    # if p1 is clockwise from p2 wrt origin then it returns +ve value
+    # if p2 is anti-clockwise from p2 wrt origin then it returns -ve value
+    # if p1 p2 and origin are collinear then it returs 0
+    @staticmethod
+    def cross_product(p1, p2):
+        return p1[0] * p2[1] - p2[0] * p1[1]
+
+    @staticmethod
+    def subtract(p1, p2):
+        return p1[0] - p2[0], p1[1] - p2[1]
+
+    # returns the cross product of vector p1p3 and p1p2
+    # if p1p3 is clockwise from p1p2 it returns +ve value
+    # if p1p3 is anti-clockwise from p1p2 it returns -ve value
+    # if p1 p2 and p3 are collinear it returns 0
+    def get_direction(self, p1, p2, p3):
+        return self.cross_product(self.subtract(p3, p1), self.subtract(p2, p1))
+
+    # checks if p lies on the segment p1p2
+    @staticmethod
+    def on_segment(p1, p2, p):
+        return min(p1[0], p2[0]) <= p[0] <= max(p1[0], p2[0]) and min(p1[1], p2[1]) <= p[1] <= max(p1[1], p2[1])
+
+    # checks if line segment p1p2 and p3p4 intersect
+    def intersect(self, p1, p2, p3, p4):
+        d1 = self.get_direction(p3, p4, p1)
+        d2 = self.get_direction(p3, p4, p2)
+        d3 = self.get_direction(p1, p2, p3)
+        d4 = self.get_direction(p1, p2, p4)
+
+        if ((d1 > 0 > d2) or (d1 < 0 < d2)) and ((d3 > 0 > d4) or (d3 < 0 < d4)):
+            return True
+
+        elif d1 == 0 and self.on_segment(p3, p4, p1):
+            return True
+        elif d2 == 0 and self.on_segment(p3, p4, p2):
+            return True
+        elif d3 == 0 and self.on_segment(p1, p2, p3):
+            return True
+        elif d4 == 0 and self.on_segment(p1, p2, p4):
+            return True
+        else:
+            return False
+
