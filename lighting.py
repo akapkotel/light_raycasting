@@ -230,6 +230,9 @@ class Light:
         for ray in rays:
             r1, r2 = ray[0], ray[1]
 
+            # thanks to this check against ray-targeted edge id we can avoid
+            # some of the artifacts caused by ray crossing the edge it was
+            # supposed to end at it's ending:
             r3 = ray[2] if len(ray) == 4 else None
             r4 = ray[3] if len(ray) == 4 else None
 
@@ -312,13 +315,14 @@ class Light:
             end_a = move_along_vector(origin, max_range, angle=-angle + angle_a)
             end_b = move_along_vector(origin, max_range, angle=-angle - angle_a)
 
-            next_edge_end = calculate_angle(origin, walls[begins].b)
-            this_edge_begin = calculate_angle(origin, walls[ends].a)
-
             # we need to optimize amount of offset rays to be as low as
             # possible, to avoid checking for collisions against redundant rays
             # redundant ray is an offset ray which would hit edge containing
             # the same endpoint it's parent-ray is connected to
+
+            next_edge_end = calculate_angle(origin, walls[begins].b)
+            this_edge_begin = calculate_angle(origin, walls[ends].a)
+
             if quadrant(position, origin) == Quadrant.UL:
                 if next_edge_end > angle:
                     offset_ray_b = (origin, end_a)
@@ -340,7 +344,7 @@ class Light:
                 if next_edge_end < angle:
                     offset_ray_b = (origin, end_b)
 
-            if offset_ray_a is not None:
+            if offset_ray_a is not None:  # add legitimate offset rays to pool
                 rays.append(offset_ray_a + (begins, ends))
             if offset_ray_b is not None:
                 rays.append(offset_ray_b + (begins, ends))
@@ -349,16 +353,16 @@ class Light:
 
         return rays
 
-    @staticmethod
-    def cross(a: tuple, b: tuple):
-        """
-        Calculate cross-product of two points.
-
-        :param a: tuple -- first point
-        :param b: tuple -- second point
-        :return: float
-        """
-        return a[0] * b[1] - a[1] * b[0]
+    # @staticmethod
+    # def cross(a: tuple, b: tuple):
+    #     """
+    #     Calculate cross-product of two points.
+    #
+    #     :param a: tuple -- first point
+    #     :param b: tuple -- second point
+    #     :return: float
+    #     """
+    #     return a[0] * b[1] - a[1] * b[0]
 
     @staticmethod
     def get_intersection(p1: tuple, p2: tuple, p3: tuple, p4: tuple):
@@ -380,49 +384,3 @@ class Light:
 
         s = ((x_5 * x_0 - x_1 * x_2) / (x_1 * x_3 - x_5 * x_4))
         return p1[0] + s * x_3, p1[1] + s * x_4
-
-    # calculates the cross product of vector p1 and p2
-    # if p1 is clockwise from p2 wrt origin then it returns +ve value
-    # if p2 is anti-clockwise from p2 wrt origin then it returns -ve value
-    # if p1 p2 and origin are collinear then it returs 0
-    @staticmethod
-    def cross_product(p1, p2):
-        return p1[0] * p2[1] - p2[0] * p1[1]
-
-    @staticmethod
-    def subtract(p1, p2):
-        return p1[0] - p2[0], p1[1] - p2[1]
-
-    # returns the cross product of vector p1p3 and p1p2
-    # if p1p3 is clockwise from p1p2 it returns +ve value
-    # if p1p3 is anti-clockwise from p1p2 it returns -ve value
-    # if p1 p2 and p3 are collinear it returns 0
-    def get_direction(self, p1, p2, p3):
-        return self.cross_product(self.subtract(p3, p1), self.subtract(p2, p1))
-
-    # checks if p lies on the segment p1p2
-    @staticmethod
-    def on_segment(p1, p2, p):
-        return min(p1[0], p2[0]) <= p[0] <= max(p1[0], p2[0]) and min(p1[1], p2[1]) <= p[1] <= max(p1[1], p2[1])
-
-    # checks if line segment p1p2 and p3p4 intersect
-    def intersect(self, p1, p2, p3, p4):
-        d1 = self.get_direction(p3, p4, p1)
-        d2 = self.get_direction(p3, p4, p2)
-        d3 = self.get_direction(p1, p2, p3)
-        d4 = self.get_direction(p1, p2, p4)
-
-        if ((d1 > 0 > d2) or (d1 < 0 < d2)) and ((d3 > 0 > d4) or (d3 < 0 < d4)):
-            return True
-
-        elif d1 == 0 and self.on_segment(p3, p4, p1):
-            return True
-        elif d2 == 0 and self.on_segment(p3, p4, p2):
-            return True
-        elif d3 == 0 and self.on_segment(p1, p2, p3):
-            return True
-        elif d4 == 0 and self.on_segment(p1, p2, p4):
-            return True
-        else:
-            return False
-

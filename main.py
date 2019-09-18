@@ -95,9 +95,9 @@ class Application(arcade.Window):
         self.obstacles = []
         self.static = SpriteList(is_static=True)
 
-        # for i in range(200, SCREEN_W, 600):
-        #     for j in range(200, SCREEN_H, 600):
-        #         self.spawn(Obstacle("light_obstacle.png", i, j))
+        for i in range(200, SCREEN_W, 300):
+            for j in range(200, SCREEN_H, 300):
+                self.spawn(Obstacle("light_obstacle.png", i, j))
         self.spawn(Obstacle("light_obstacle.png", 500, 500))
 
         # light testing:
