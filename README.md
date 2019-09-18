@@ -34,6 +34,8 @@ To be done:
 
 1. Optimizations listed above.
 2. Customization: changing amount and positioning of obstacles.
+3. Replacing single-colored "lit" polygon with gradient to simulate diminishing power of light. It could force me to replace arcade library with something else, since arcade does not allow draw gradient-polygons in real-time.
+4. Adding this project to my Django blog (when it is also finished).
 
 If anyone has ideas how to make this algorithm better (fasetr), please, notice me, fork and make pull-requests.
 
