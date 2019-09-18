@@ -240,7 +240,6 @@ class Light:
 
             colliding_wall = None
             for wall in walls:  # TODO (2): find cheaper way to detect this:
-
                 if wall.id not in (r3, r4) and line.crosses(wall.line):
                     colliding_wall = list(wall.line.coords)
                     break
@@ -248,20 +247,20 @@ class Light:
             if colliding_wall is not None:
                 w1, w2 = colliding_wall[0], colliding_wall[1]
                 i = self.get_intersection(r1, r2, w1, w2)
-                new_ray = (origin, i)
+                new_ray = (origin, i, None, None)
                 rays.append(new_ray)
                 colliding_rays.append(ray)
         e = datetime.now()
         print(e - s)
 
-        rays_ = [ray for ray in rays if ray not in colliding_rays]
-        rays_.sort(key=lambda r: calculate_angle(origin, r[1]))
-        polygon = [ray[1] for ray in rays_]
+        rays = [ray for ray in rays if ray not in colliding_rays]
+        rays.sort(key=lambda r: calculate_angle(origin, r[1]))
+        polygon = (ray[1] for ray in rays)
 
-        self.rays = rays_
+        self.rays = rays
         self.light_polygon = polygon
 
-    def cast_rays(self, endpoints: list, origin: tuple, max_range: float):
+    def cast_rays(self, endpoints, origin, max_range):
         """
         Create list of virtual light-rays sent from the Light position
         toward all the edges-endings and screen corners. Points where rays
@@ -353,19 +352,8 @@ class Light:
 
         return rays
 
-    # @staticmethod
-    # def cross(a: tuple, b: tuple):
-    #     """
-    #     Calculate cross-product of two points.
-    #
-    #     :param a: tuple -- first point
-    #     :param b: tuple -- second point
-    #     :return: float
-    #     """
-    #     return a[0] * b[1] - a[1] * b[0]
-
     @staticmethod
-    def get_intersection(p1: tuple, p2: tuple, p3: tuple, p4: tuple):
+    def get_intersection(p1, p2, p3, p4):
         """
         Relatively cheap method of finding segments-intersections.
 

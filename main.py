@@ -7,7 +7,8 @@ import random
 import arcade
 
 import geometry as g
-from menu import Cursor
+from datetime import datetime  # for measuring execution speed
+
 
 PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 SCREEN_W = 1000
@@ -78,7 +79,7 @@ class Application(arcade.Window):
 
     def __init__(self, screen_w, screen_h, title, update_rate):
         super().__init__(screen_w, screen_h, title, update_rate=update_rate)
-        self.cursor = None
+        self.set_mouse_visible(False)
 
         self.lights = None
         self.obstacles = None
@@ -90,7 +91,6 @@ class Application(arcade.Window):
 
     def setup(self):
         """Set all attributes to default values."""
-        self.cursor = self.setup_cursor()
         self.lights = []
         self.obstacles = []
         self.static = SpriteList(is_static=True)
@@ -106,11 +106,6 @@ class Application(arcade.Window):
         L.y = 10
         self.lights.append(L)
         print(self.lights)
-
-    def setup_cursor(self):
-        """"""
-        cursor = Cursor(self, PATH, "normal.png", 0, False)
-        return cursor
 
     def spawn(self, spawned):
         """
@@ -137,7 +132,6 @@ class Application(arcade.Window):
         """"""
         self.update_lights()
         self.static.update()
-        self.cursor.on_update()
 
     def update_lights(self):
         for light in self.lights:
@@ -148,7 +142,6 @@ class Application(arcade.Window):
         arcade.start_render()
         self.static.draw()
         self.draw_lights()
-        self.cursor.draw()
 
     def draw_lights(self):
         """Draw bright polygon which simulates light."""
@@ -182,7 +175,5 @@ def run_app():
 
 
 if __name__ == "__main__":
-    calculate_angle = g.calculate_angle
-    pointed_w_cursor = g.detect_collision_on_screen
     from lighting import Light  # do not move this to the top!
     run_app()

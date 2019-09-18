@@ -5,16 +5,12 @@ especially speeds, positions, paths and level-topography-handling.
 """
 
 import math
+
 from enum import Enum
-
-from shapely import speedups, affinity
+from shapely import speedups
 from shapely.geometry import Point, LineString, Polygon
-
 from arcade import check_for_collision
-
-from menu import Cursor
-from main import SCREEN_W, SCREEN_H, SpriteList, \
-    Obstacle, new_id
+from main import SCREEN_W, SCREEN_H, Obstacle
 
 UL, UR, LL, LR = "UL", "UR", "LL", "LR"
 UPPER, LOWER, LEFT, RIGHT, DIAGONAL = "UPPER", "LOWER", "LEFT", "RIGHT", "DIAG"
@@ -247,7 +243,7 @@ def update_screen_coordinates(left: float, bottom: float):
     view_left, view_bottom = left, bottom
 
 
-def detect_all_screen_collisions(this, others: SpriteList):
+def detect_all_screen_collisions(this, others):
     """
     Check if Sprite or Cursor object collides with any other Sprite and
     return list of colliding sprites or None.
@@ -265,13 +261,14 @@ def detect_all_screen_collisions(this, others: SpriteList):
     return [other for other in potential if check_for_collision(this, other)]
 
 
-def detect_collision_on_screen(this, others: SpriteList):
+def detect_collision_on_screen(this, others, cursor):
     """
     Check if Sprite or Cursor object collides with any other Sprite and
     return first colliding Sprite as a result (usually faster than above).
 
     :param this: Sprite -- sprite we need to know if collides with anything
     :param others: LayeredSpriteList -- list of other sprites to check against
+    :param cursor: bool -- if object against which check is m ade is a cursor
     :return: None or Sprite -- Sprite that 'this' collides with
     """
     # we need only to check collisions with objects visible on the screen:
@@ -281,10 +278,7 @@ def detect_collision_on_screen(this, others: SpriteList):
         return
 
     for other in potential:
-        if isinstance(this, Cursor):
-            if is_position_inside_area(this.position, other.points):
-                return other
-        elif check_for_collision(this, other):
+        if check_for_collision(this, other):
             return other
 
 
