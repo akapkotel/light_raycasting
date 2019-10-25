@@ -17,18 +17,18 @@ Installation and running:
 
 It requires more optimizations:
 
-1. For now it works only for static obstacles - positions of polygons vertices are calculated once at the start. Dynamic updates of obsatcles-corners would cost a lot of computing power which is already entirely consumed by raycasting.
+1. For now it works only for static obstacles - positions of polygons vertices are calculated once at the start. Dynamic   updates of obsatcles-corners would cost a lot of computing power which is already entirely consumed by raycasting.
 2. It requires the enclosed FOV (it must treat screen edges as outermost 'walls' encapsulating the scene)
 3. It does not scale-up: with 9 squared-obstacles on the screen it calculates all raycasts in between 0.0085s to 0.04s, 
    which means that in the worst scenario the simulation is restricted to not more that 20 FPS! I have to find way to 
    avoid calculating less rays in some scenarios (e.g. when light-source is placed at the bottom of the screen).
    I do not know how to replace shapely intersect() method with something faster, also I use arcade package for drawing, 
-   maybe here is some space for optimization.
+   maybe here is some space for optimization - a faster draw function.
 4. To change it to FOV-simulation, you need to add half-arcs of visible space which would connect raycasts andings. For now,
    visibility-polygon is cut straightly.
 5. Maybe some work could be done with multithreading or multiprocessing, but I did not work it out yet.
-6. Unfortunatelly, my algorithm suffers for the same problems which Amit Patel from Red Blob Games blog reports: robustness      problems which causes generation of some invalid, falsely-dark triangles. I was only able to get rid of small part of        them. I suppose, there is no easy way to fix this, and I can only send you to the same source treating about this problem,    that Amit reccomends: https://github.com/mikolalysenko/robust-arithmetic-notes
-7. Maybe I shgould use another algorithm - triangle-expanding alforithm described in the PDF file added to this repository.
+6. Unfortunatelly, my algorithm suffers for the same problems which Amit Patel from Red Blob Games blog reports: robustness      problems which causes generation of some invalid, falsely-dark triangles. I was only able to get rid of small part of        them. I suppose, there is no easy way to fix this, and I can only send you to the same source about this problem, that   Amit reccomends: https://github.com/mikolalysenko/robust-arithmetic-notes
+7. Maybe I shgould use another algorithm - triangle-expanding algorithm described in the PDF file added to this repository.
 
 To be done:
 
