@@ -9,20 +9,6 @@ from geometry import (speedups, LineString, distance_2d, calculate_angle,
 speedups.enable()
 
 
-class Ray:
-    """TODO (1): use this class instead of tuples for rays"""
-
-    count = 0
-    __slots__ = ("id", "a", "b", "length", "angle")
-
-    def __init__(self, a: tuple, b: tuple):
-        self.id = new_id(Ray)
-        self.a = a
-        self.b = b
-        self.length = distance_2d(a, b)
-        self.angle = calculate_angle(a, b)
-
-
 class Endpoint:
     """
     Class used to setup points where light-ray hits edges and vertices of
