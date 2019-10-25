@@ -17,7 +17,7 @@ Installation and running:
 
 It requires more optimizations:
 
-1. For now it works only for static obstacles
+1. For now it works only for static obstacles - positions of polygons vertices are calculated once at the start. Dynamic updates of obsatcles-corners would cost a lot of computing power which is already entirely consumed by raycasting.
 2. It requires the enclosed FOV (it must treat screen edges as outermost 'walls' encapsulating the scene)
 3. It does not scale-up: with 9 squared-obstacles on the screen it calculates all raycasts in between 0.0085s to 0.04s, 
    which means that in the worst scenario the simulation is restricted to not more that 20 FPS! I have to find way to 
@@ -37,7 +37,7 @@ To be done:
 3. Replacing single-colored "lit" polygon with gradient to simulate diminishing power of light. It could force me to replace arcade library with something else, since arcade does not allow draw gradient-polygons in real-time.
 4. Adding this project to my Django blog (when it is also finished).
 
-If anyone has ideas how to make this algorithm better (fasetr), please, notice me, fork and make pull-requests.
+If anyone has ideas how to make this algorithm better (faster), please, notice me, fork and make pull-requests.
 
 ----
 
