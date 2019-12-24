@@ -1,12 +1,13 @@
 #!/usr/bin/env
 
-from datetime import datetime  # for measuring execution speed
-
-from main import new_id, SCREEN_H, SCREEN_W, SpriteList
+from main import timer, new_id, SCREEN_H, SCREEN_W, SpriteList
 from geometry import (speedups, LineString, distance_2d, calculate_angle,
                       move_along_vector, Quadrant, quadrant)
 
-speedups.enable()
+if speedups.available:
+    speedups.enable()
+else:
+    print("Speedups could not be initialized.")
 
 
 class Endpoint:
@@ -78,8 +79,7 @@ class Light:
                  obstacles: SpriteList,
                  color: tuple = (255, 255, 255, 255),  # white
                  power: float = 1500.0,
-                 arc_angle: float = 360.0,
-                 debug: bool = False):
+                 arc_angle: float = 360.0):
         """
         Instantiate new Light object, which is a point light-emitter
         light-raycasting in 360 degrees around.
@@ -102,9 +102,6 @@ class Light:
         self.color = color
         self.arc_angle = arc_angle
         self.direction = 0
-
-        self.debug = debug
-
         self.obstacles = obstacles
 
         self.light_polygon = []
@@ -182,6 +179,7 @@ class Light:
         """
         self.update_light()
 
+    @timer
     def update_light(self):
         """
         Emmit light-ray from the 'origin' which is the light-source center
@@ -211,8 +209,8 @@ class Light:
 
         walls.sort(key=lambda w: distance_2d((w.centroid.x, w.centroid.y), origin))
 
-        s = datetime.now()
-        colliding_rays = []
+        # s = datetime.now()
+        colliding_rays, the_line, line = [], None, None
         for ray in rays:
             r1, r2 = ray[0], ray[1]
 
@@ -222,11 +220,12 @@ class Light:
             r3 = ray[2] if len(ray) == 4 else None
             r4 = ray[3] if len(ray) == 4 else None
 
-            line = LineString((r1, r2))
+            the_line = LineString((r1, r2))
 
             colliding_wall = None
             for wall in walls:  # TODO (2): find cheaper way to detect this:
-                if wall.id not in (r3, r4) and line.crosses(wall.line):
+                line = wall.line
+                if wall.id not in (r3, r4) and the_line.crosses(line):
                     colliding_wall = list(wall.line.coords)
                     break
 
@@ -236,8 +235,6 @@ class Light:
                 new_ray = (origin, i, None, None)
                 rays.append(new_ray)
                 colliding_rays.append(ray)
-        e = datetime.now()
-        print(e - s)
 
         rays = [ray for ray in rays if ray not in colliding_rays]
         rays.sort(key=lambda r: calculate_angle(origin, r[1]))
@@ -246,6 +243,7 @@ class Light:
         self.rays = rays
         self.light_polygon = polygon
 
+    # @timer
     def cast_rays(self, endpoints, origin, max_range):
         """
         Create list of virtual light-rays sent from the Light position
@@ -259,7 +257,7 @@ class Light:
         :return: list -- all light-rays sent from the Light object
         """
         walls = self.walls
-        angle_a = 0.0001  # angle shift for additional rays sweeping around c.
+        angle_a = 0.00001  # angle shift for additional rays sweeping around c.
 
         rays = []
         edge, edge_distance = None, None

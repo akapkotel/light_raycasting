@@ -3,17 +3,21 @@
 
 """
 import os
+import time
 import random
 import arcade
 
-import geometry as g
-from datetime import datetime  # for measuring execution speed
+from functools import wraps
 
 
 PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
+
+TIMER = True
+SHOW_RAYS = True  # to draw rays from origin to eah obstacle-corner
+
 SCREEN_W = 1000
 SCREEN_H = 1000
-TITLE = "Light ray-casting demo"
+TITLE = "Ray-casting demo"
 FPS = 30
 GREEN = arcade.color.GREEN
 MAP_GREEN = arcade.color.APPLE_GREEN
@@ -29,7 +33,31 @@ SHADOW = arcade.color.DARK_GRAY
 
 view_left, view_bottom = 0, 0
 r_random = random.random
+get_time = time.perf_counter
+draw_line = arcade.draw_line
+draw_text = arcade.draw_text
+draw_polygon_filled = arcade.draw_polygon_filled
+draw_ellipse_outline = arcade.draw_ellipse_outline
 SpriteList = arcade.SpriteList
+
+
+def timer(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = get_time()
+
+        result = func(*args, **kwargs)
+        if not TIMER:
+            return result
+
+        end_time = get_time()
+        execution_time = end_time - start_time
+        fps = 1 / execution_time
+        fr = f"{func.__name__} finished in {execution_time:.4f} secs. FPS:{fps}"
+
+        print(fr)
+        return result
+    return wrapper
 
 
 def get_image_path(filename: str):
@@ -54,6 +82,7 @@ def new_id(category):
         raise AttributeError("Object passed has no class attribute: 'count'!")
     category.count += 1
     return category.count
+
 
 class Obstacle(arcade.Sprite):
 
@@ -85,42 +114,37 @@ class Application(arcade.Window):
         self.obstacles = None
 
         self.units = None
-        self.static = None
+        self.obstacles = None
 
         self.setup()
 
     def setup(self):
         """Set all attributes to default values."""
         self.lights = []
-        self.obstacles = []
-        self.static = SpriteList(is_static=True)
+        self.obstacles = SpriteList(is_static=True)
 
-        for i in range(200, SCREEN_W, 300):
-            for j in range(200, SCREEN_H, 300):
+        for i in range(200, SCREEN_W, 500):
+            for j in range(200, SCREEN_H, 500):
                 self.spawn(Obstacle("light_obstacle.png", i, j))
-        self.spawn(Obstacle("light_obstacle.png", 500, 500))
+        # self.spawn(Obstacle("light_obstacle.png", 500, 500))
 
         # light testing:
-        L = Light(600, 500, 3, obstacles=self.static, power=1500, debug=True)
+        L = Light(600, 500, 3, obstacles=self.obstacles, power=1500)
         L.x = 10
         L.y = 10
         self.lights.append(L)
-        print(self.lights)
 
     def spawn(self, spawned):
         """
-        Use this method to create new instances of every in-game object to
+        Use this method to create new instances of each in-game object to
         assure, that it would be appended to correct SpriteList or ordinary
         list and avoid adding them in additional lines. It also assures that
         obstacles are registered in level geometry.
         """
-        lists = {"static": [], "lights": [], "obstacles": []}
+        lists = {"obstacles": [], "lights": []}
 
         if isinstance(spawned, Obstacle):
             lists["obstacles"].append(spawned)
-            if spawned.fixed:
-                lists["static"].append(spawned)
-                g.add_to_level_geometry(spawned)
         if isinstance(spawned, Light):
             lists["lights"].append(spawned)
         for key, value in lists.items():
@@ -129,47 +153,42 @@ class Application(arcade.Window):
         return spawned
 
     def on_update(self, delta_time: float):
-        """"""
         self.update_lights()
-        self.static.update()
+        self.obstacles.update()
 
     def update_lights(self):
         for light in self.lights:
             light.update()
 
     def on_draw(self):
-        """Refresh graphic-representation of the game-state on the screen."""
         arcade.start_render()
-        self.static.draw()
+        self.obstacles.draw()
         self.draw_lights()
 
+    @timer
     def draw_lights(self):
         """Draw bright polygon which simulates light."""
         for light in self.lights:
             if light.light_polygon:
-                arcade.draw_polygon_filled(light.light_polygon, light.color)
-            if light.debug:
+                draw_polygon_filled(light.light_polygon, light.color)
+                draw_ellipse_outline(light.x, light.y, 10, 10, BLACK)
+            if SHOW_RAYS:
                 for r in light.rays:
-                    arcade.draw_line(r[0][0], r[0][1], r[1][0], r[1][1], RED)
-                arcade.draw_ellipse_outline(light.x, light.y, 10, 10, BLACK)
-                arcade.draw_text(str(len(light.rays)), light.x + 5, light.y, RED)
+                    draw_line(r[0][0], r[0][1], r[1][0], r[1][1], RED)
 
     def on_mouse_motion(self, x: float, y: float, dx: float, dy: float):
         """Handle the mouse movements."""
         x, y = x + view_left, y + view_bottom
 
-        if self.lights:
-            self.lights[0].x = x + view_bottom
-            self.lights[0].y = y + view_left
+        for light in self.lights:
+            light.x = x + view_bottom
+            light.y = y + view_left
 
 
 def run_app():
     """Entry point."""
-
-    global game, game_data  # TODO: game_data object [ ] of objects [ ]
-    game_data = None
-    game = Application(SCREEN_W, SCREEN_H, TITLE, update_rate=FPS)
-    game.set_update_rate(1 / FPS)
+    application = Application(SCREEN_W, SCREEN_H, TITLE, update_rate=FPS)
+    application.set_update_rate(1 / FPS)
     arcade.set_background_color(DARK)
     arcade.run()
 
