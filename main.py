@@ -12,9 +12,11 @@ from functools import wraps
 
 PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 
+# debug variables:
 TIMER = True
-SHOW_RAYS = True  # to draw rays from origin to eah obstacle-corner
+SHOW_RAYS = False  # to draw rays from origin to eah obstacle-corner
 
+# constants:
 SCREEN_W = 1000
 SCREEN_H = 1000
 TITLE = "Ray-casting demo"
