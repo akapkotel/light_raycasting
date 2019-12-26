@@ -14,6 +14,7 @@ Installation and running:
 2. Setup new virtual environment with Python 3.6.
 3. Install requirements with pip install -r requirements.txt
 4. Run main.py in any IDE, e.g. PyCharm, or in Terminal.
+5. In main.py in section "#debug variables" you can change value of TIMER boolean to False if you want disable measuring execution time (default is True), and SHOW_RAYS to True if you want see how many raycasts are drawn each frame (default is False).
 
 It requires more optimizations:
 
