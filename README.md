@@ -15,6 +15,9 @@ Installation and running:
 3. Install requirements with pip install -r requirements.txt
 4. Run main.py in any IDE, e.g. PyCharm, or in Terminal.
 5. In main.py in section "#debug variables" you can change value of TIMER boolean to False if you want disable measuring execution time (default is True), and SHOW_RAYS to True if you want see how many raycasts are drawn each frame (default is False).
+6. Added also an alternative for Arcade library: Pygame as a graphic layer which provides faster drawings calls. You can
+switch between these two libraries by changing USE_PYGAME variable from True to False and vice-versa. I also noticed that
+ drawing calls in Pygame produce less graphic glitches.
 
 It requires more optimizations:
 

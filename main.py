@@ -6,15 +6,18 @@ import os
 import time
 import random
 import arcade
+import pygame
 
 from functools import wraps
 
 
 PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 
+
 # debug variables:
 TIMER = True
-SHOW_RAYS = False  # to draw rays from origin to eah obstacle-corner
+SHOW_RAYS = True  # to draw rays from origin to eah obstacle-corner
+USE_PYGAME = True
 
 # constants:
 SCREEN_W = 1000
@@ -30,14 +33,13 @@ WHITE = arcade.color.WHITE
 DARK = (32, 32, 32)
 LIGHT = (192, 192, 192)
 GREY = arcade.color.GRAY
-BLACK = arcade.color.BLACK
+BLACK = (0, 0, 0)
 SHADOW = arcade.color.DARK_GRAY
 
 view_left, view_bottom = 0, 0
 r_random = random.random
 get_time = time.perf_counter
 draw_line = arcade.draw_line
-draw_text = arcade.draw_text
 draw_polygon_filled = arcade.draw_polygon_filled
 draw_ellipse_outline = arcade.draw_ellipse_outline
 SpriteList = arcade.SpriteList
@@ -73,17 +75,18 @@ def get_image_path(filename: str):
     return PATH + filename
 
 
-def new_id(category):
+def new_id(class_):
     """
     Assign new id to the newly instantiated object.
 
-    :param category: class -- any class which has count class attribute
+    :param class_: class -- any class which has count class attribute
     :return: int -- new id value
     """
-    if not hasattr(category, "count"):
+    try:
+        class_.count += 1
+        return class_.count
+    except ValueError:
         raise AttributeError("Object passed has no class attribute: 'count'!")
-    category.count += 1
-    return category.count
 
 
 class Obstacle(arcade.Sprite):
@@ -104,6 +107,56 @@ class Obstacle(arcade.Sprite):
         self.id = new_id(Obstacle)
         self.fixed = True
 
+
+def redraw_screen(light):
+    window.fill(BLACK)
+    if light.light_polygon:
+        draw_light(light)
+    pygame.display.update()
+
+
+@timer
+def draw_light(light):
+    pygame.draw.polygon(window, light.color, light.light_polygon)
+    pygame.draw.circle(window, RED, (light.x, light.y), 10)
+    if SHOW_RAYS:
+        for r in light.rays:
+            pygame.draw.line(window, RED, (r[0][0], r[0][1]), (r[1][0], r[1][1]))
+
+
+def create_obstacles():
+    obstacles = SpriteList()
+    for i in range(200, SCREEN_W, 500):
+        for j in range(200, SCREEN_H, 500):
+            obstacle = Obstacle("light_obstacle.png", i, j)
+            obstacles.append(obstacle)
+    return obstacles
+
+
+def main_loop():
+    run = True
+    obstacles = create_obstacles()
+    light = Light(SCREEN_W//2, SCREEN_H//2, 0, obstacles)
+
+    while run:
+        light.update_light()
+        # print(light.light_polygon)
+        for event in pygame.event.get():
+            event_type = event.type
+            if event_type == pygame.QUIT:
+                run = False
+                pygame.quit()
+            elif event_type == pygame.MOUSEMOTION:
+                on_mouse_motion(*event.pos, light)
+
+        redraw_screen(light)
+
+
+def on_mouse_motion(x, y, light):
+    light.x, light.y = x, y
+
+
+# Arcade version:
 
 class Application(arcade.Window):
     """Application application class."""
@@ -164,7 +217,7 @@ class Application(arcade.Window):
 
     def on_draw(self):
         arcade.start_render()
-        self.obstacles.draw()
+        # self.obstacles.draw()
         self.draw_lights()
 
     @timer
@@ -197,4 +250,9 @@ def run_app():
 
 if __name__ == "__main__":
     from lighting import Light  # do not move this to the top!
-    run_app()
+    if USE_PYGAME:
+        window = pygame.display.set_mode((SCREEN_W, SCREEN_H))
+        pygame.display.set_caption("Online Game Test")
+        main_loop()
+    else:
+        run_app()
