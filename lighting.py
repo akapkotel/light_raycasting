@@ -179,7 +179,7 @@ class Light:
         """
         self.update_light()
 
-    @timer
+    # @timer
     def update_light(self):
         """
         Emmit light-ray from the 'origin' which is the light-source center
@@ -238,7 +238,7 @@ class Light:
 
         rays = [ray for ray in rays if ray not in colliding_rays]
         rays.sort(key=lambda r: calculate_angle(origin, r[1]))
-        polygon = (ray[1] for ray in rays)
+        polygon = [ray[1] for ray in rays]
 
         self.rays = rays
         self.light_polygon = polygon
