@@ -76,7 +76,7 @@ class Light:
                  x: float,
                  y: float,
                  h: float,
-                 obstacles: SpriteList,
+                 obstacles: list,
                  color: tuple = (255, 255, 255, 255),  # white
                  power: float = 1500.0,
                  arc_angle: float = 360.0):
@@ -97,7 +97,6 @@ class Light:
         self.x = x
         self.y = y
         self.h = h
-        self.position = [self.x, self.y, self.h]
         self.power = power
         self.color = color
         self.arc_angle = arc_angle
@@ -105,7 +104,6 @@ class Light:
         self.obstacles = obstacles
 
         self.light_polygon = []
-        self.light_triangles = []
         self.endpoints = []
         self.walls = {}
         self.rays = []
@@ -133,7 +131,7 @@ class Light:
 
         # obstacle's edges:
         for obstacle in obstacles:
-            points = obstacle.points
+            points = obstacle#.points
             count = len(points) - 1
             for i in range(count):
                 wall = [points[i], points[i + 1]]
@@ -179,7 +177,7 @@ class Light:
         """
         self.update_light()
 
-    # @timer
+    @timer
     def update_light(self):
         """
         Emmit light-ray from the 'origin' which is the light-source center
@@ -209,24 +207,24 @@ class Light:
 
         walls.sort(key=lambda w: distance_2d((w.centroid.x, w.centroid.y), origin))
 
-        # s = datetime.now()
-        colliding_rays, the_line, line = [], None, None
+        colliding_rays, ray_linestring, line = [], None, None
         for ray in rays:
             r1, r2 = ray[0], ray[1]
 
             # thanks to this check against ray-targeted edge id we can avoid
             # some of the artifacts caused by ray crossing the edge it was
             # supposed to end at it's ending:
-            r3 = ray[2] if len(ray) == 4 else None
-            r4 = ray[3] if len(ray) == 4 else None
+            r3, r4 = None, None
+            if len(ray) == 4:
+                r3, r4 = ray[2], ray[3]
 
-            the_line = LineString((r1, r2))
+            ray_linestring = LineString((r1, r2))
 
             colliding_wall = None
             for wall in walls:  # TODO (2): find cheaper way to detect this:
                 line = wall.line
-                if wall.id not in (r3, r4) and the_line.crosses(line):
-                    colliding_wall = list(wall.line.coords)
+                if wall.id not in (r3, r4) and ray_linestring.crosses(line):
+                    colliding_wall = [wall.a, wall.b]  #[c for c in wall.line.coords]
                     break
 
             if colliding_wall is not None:
@@ -238,10 +236,9 @@ class Light:
 
         rays = [ray for ray in rays if ray not in colliding_rays]
         rays.sort(key=lambda r: calculate_angle(origin, r[1]))
-        polygon = [ray[1] for ray in rays]
+        self.light_polygon = [ray[1] for ray in rays]
 
         self.rays = rays
-        self.light_polygon = polygon
 
     # @timer
     def cast_rays(self, endpoints, origin, max_range):
@@ -257,7 +254,7 @@ class Light:
         :return: list -- all light-rays sent from the Light object
         """
         walls = self.walls
-        angle_a = 0.00001  # angle shift for additional rays sweeping around c.
+        angle_a = 0.0001  # angle shift for additional rays sweeping around c.
 
         rays = []
         edge, edge_distance = None, None
@@ -278,9 +275,8 @@ class Light:
             # that wall ends and their angles are in range of angles of that
             # wall's ending rays:
             # TODO (3): do not detect lower-left corner of the screen properly
-            if (edge is None or edge == begins or
-                    distance_2d(position, origin) < edge_distance):
-                first_distance = distance_2d(position, origin)
+            first_distance = distance_2d(position, origin)
+            if edge is None or edge == begins or first_distance < edge_distance:
                 second_vertex = walls[ends].a
                 if calculate_angle(origin, second_vertex) > angle:
                     edge = ends
@@ -327,10 +323,15 @@ class Light:
                 if next_edge_end < angle:
                     offset_ray_b = (origin, end_b)
 
-            if offset_ray_a is not None:  # add legitimate offset rays to pool
-                rays.append(offset_ray_a + (begins, ends))
-            if offset_ray_b is not None:
-                rays.append(offset_ray_b + (begins, ends))
+            # add legitimate offset rays to pool
+            # if offset_ray_a is not None:
+            #     rays.append(offset_ray_a + (begins, ends))
+            # if offset_ray_b is not None:
+            #     rays.append(offset_ray_b + (begins, ends))
+            for ray in (offset_ray_a, offset_ray_b):
+                if ray is not None:
+                    rays.append(ray + (begins, ends))
+
             if (origin, (0.0, 0.0)) not in rays:  # temporary fix for (3)
                 rays.append((origin, (0.0, 0.0), None, None))
 

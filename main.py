@@ -115,7 +115,7 @@ def redraw_screen(light):
     pygame.display.update()
 
 
-@timer
+# @timer
 def draw_light(light):
     pygame.draw.polygon(window, light.color, light.light_polygon)
     pygame.draw.circle(window, RED, (light.x, light.y), 10)
@@ -125,10 +125,11 @@ def draw_light(light):
 
 
 def create_obstacles():
-    obstacles = SpriteList()
+    obstacles = []  # SpriteList()
     for i in range(200, SCREEN_W, 500):
         for j in range(200, SCREEN_H, 500):
-            obstacle = Obstacle("light_obstacle.png", i, j)
+            # obstacle = Obstacle("light_obstacle.png", i, j)
+            obstacle = [(i, j), (i+200, j), (i+200, j+250), (i, j+250)]
             obstacles.append(obstacle)
     return obstacles
 
@@ -157,7 +158,6 @@ def on_mouse_motion(x, y, light):
 
 
 # Arcade version:
-
 class Application(arcade.Window):
     """Application application class."""
 
@@ -176,18 +176,15 @@ class Application(arcade.Window):
     def setup(self):
         """Set all attributes to default values."""
         self.lights = []
-        self.obstacles = SpriteList(is_static=True)
+        self.obstacles = []
 
         for i in range(200, SCREEN_W, 500):
             for j in range(200, SCREEN_H, 500):
-                self.spawn(Obstacle("light_obstacle.png", i, j))
-        # self.spawn(Obstacle("light_obstacle.png", 500, 500))
+                obstacle = [(i, j), (i + 200, j), (i + 200, j + 200),(i, j + 200)]
+                self.obstacles.append(obstacle)
 
-        # light testing:
-        L = Light(600, 500, 3, obstacles=self.obstacles, power=1500)
-        L.x = 10
-        L.y = 10
-        self.lights.append(L)
+        light = Light(600, 500, 3, obstacles=self.obstacles, power=1500)
+        self.lights.append(light)
 
     def spawn(self, spawned):
         """
@@ -252,7 +249,7 @@ if __name__ == "__main__":
     from lighting import Light  # do not move this to the top!
     if USE_PYGAME:
         window = pygame.display.set_mode((SCREEN_W, SCREEN_H))
-        pygame.display.set_caption("Online Game Test")
+        pygame.display.set_caption("Visibility algorithm")
         main_loop()
     else:
         run_app()
