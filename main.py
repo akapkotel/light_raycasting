@@ -21,7 +21,7 @@ SHOW_RAYS = True  # to draw rays from origin to eah obstacle-corner
 
 # type of polygon is determined by the number of edges: 3 = triangle,
 # 4 = square, 5 = pentagon, 6 = hexagon etc.
-OBSTACLE_EDGES = 3
+OBSTACLE_EDGES = 4
 # size of obstacles and distance between them is determined by this variable
 # (smaller the size, more obstacles would be drawn!):
 OBSTACLE_EDGE_SIZE = 100

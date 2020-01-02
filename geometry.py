@@ -312,14 +312,11 @@ class Light:
         rays = self.cast_rays_to_corners(origin, corners)
         print(f"Number of rays: {len(rays)}")
 
-        # walls_linestrings = self.walls_linestrings
-
         corners_open_walls = self.corners_open_walls
         corners_close_walls = self.corners_close_walls
         colliding = []
         offset_rays = []
         for ray in rays:
-            # ray_line = LineString(ray)
             corner = ray[1]
 
             if corner in corners:  # check if it is ray shot at obstacle corner
@@ -330,8 +327,6 @@ class Light:
                 both_walls = None
 
             for wall in walls:
-                # wall_line = walls_linestrings[wall]
-                # if ray_line.intersects(wall_line):
                 if intersects(ray, wall) or intersects(wall, ray):
                     if both_walls is None:  # additional around-corner ray
                         colliding.append(ray)
@@ -353,6 +348,16 @@ class Light:
 
     @staticmethod
     def cast_rays_to_corners(origin, corners):
+        """
+        Create a 'ray' connecting origin with each corner (obstacle vertex) on
+        the screen. Ray is a tuple of two (x, y) coordinates used later to
+        find which segment obstructs visibility.
+        TODO: find way to emit less offset rays [ ][ ]
+        :param origin: tuple
+        :param corners: list
+        :return: list
+        """
+
         rays = []
         for corner in corners:
             rays.append((origin, corner))

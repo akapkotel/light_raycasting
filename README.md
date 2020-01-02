@@ -15,9 +15,7 @@ Installation and running:
 3. Install requirements with pip install -r requirements.txt
 4. Run main.py in any IDE, e.g. PyCharm, or in Terminal.
 5. In main.py in section "#debug variables" you can change value of TIMER boolean to False if you want disable measuring execution time (default is True), and SHOW_RAYS to True if you want see how many raycasts are drawn each frame (default is False).
-6. Added also an alternative for Arcade library: Pygame as a graphic layer which provides faster drawings calls. You can
-switch between these two libraries by changing USE_PYGAME variable from True to False and vice-versa. I also noticed that
- drawing calls in Pygame produce less graphic glitches.
+6. Size and shape of obstacles could be modified by changing OBSTACLE_EDGES variable value: 3 makes triangles, 4 squares, 5 pentagons etc. Variable OBSTACLE_EDGE_SIZE controlls not only size of obstacles, but also distances between them.
 
 It requires more optimizations:
 
@@ -42,6 +40,12 @@ To be done:
 4. Adding this project to my Django blog (when it is also finished).
 
 If anyone has ideas how to make this algorithm better (faster), please, notice me, fork and make pull-requests.
+
+Changelog:
+
+1. Replaced arcade library with pygame for faster draw-calls.
+2. Replaced shapely-calls with simpler geometric functions.
+3. Optimizations allowed simulation of more obstacles and/or polygons with more vertices without loss of the speed.
 
 ----
 
