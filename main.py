@@ -2,17 +2,10 @@
 """
 
 """
-import os
 import time
-import random
-import arcade
 import pygame
 import pygame.freetype
-
 from functools import wraps
-
-
-PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 
 
 # debug variables:
@@ -21,7 +14,7 @@ SHOW_RAYS = True  # to draw rays from origin to eah obstacle-corner
 
 # type of polygon is determined by the number of edges: 3 = triangle,
 # 4 = square, 5 = pentagon, 6 = hexagon etc.
-OBSTACLE_EDGES = 4
+OBSTACLE_EDGES = 6
 # size of obstacles and distance between them is determined by this variable
 # (smaller the size, more obstacles would be drawn!):
 OBSTACLE_EDGE_SIZE = 100
@@ -33,17 +26,14 @@ SCREEN_W = 1000
 SCREEN_H = 1000
 TITLE = "Visibility algorithm demo"
 FPS = 30
-GREEN = arcade.color.GREEN
-MAP_GREEN = arcade.color.APPLE_GREEN
-GRASS = arcade.color.DARK_OLIVE_GREEN
-RED = arcade.color.RED
-SUN = arcade.color.LIGHT_YELLOW
-WHITE = arcade.color.WHITE
+RED = (255, 0, 0)
+SUN = (100, 150, 100)
+WHITE = (255, 255, 255)
 DARK = (32, 32, 32)
 LIGHT = (192, 192, 192)
-GREY = arcade.color.GRAY
+GREY = (127, 127, 127)
 BLACK = (0, 0, 0)
-SHADOW = arcade.color.DARK_GRAY
+SHADOW = (240, 240, 240)
 
 get_time = time.perf_counter
 draw = pygame.draw
@@ -101,9 +91,6 @@ def draw_intersection(intersector, second_segemnt):
 def draw_obstacles(obstacles):
     for obstacle in obstacles:
         draw.polygon(window, BLACK, obstacle)
-        # for corner in obstacle:
-        #     # pos = (corner[0]+15, corner[1]+15)
-        #     # draw_text(window, pos, str(obstacle.index(corner)), WHITE)
 
 
 # @timer
@@ -115,8 +102,6 @@ def draw_light(light):
         for r in light.rays:
             color = RED if light.rays.index(r) == 0 else WHITE
             draw.line(window, color, (r[0][0], r[0][1]), (r[1][0], r[1][1]))
-            index = light.rays.index(r)
-            # draw_text(window, r[1], str(index), WHITE)
 
     pygame.draw.circle(window, SUN, (light.x, light.y), 10)
 

@@ -1,4 +1,4 @@
-# light_raycasting
+# Visibility/raycasting algorithm
 
 Visibility/light-raycasting algorithm python implementation inspired by: https://www.redblobgames.com/articles/visibility/
 
