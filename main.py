@@ -19,11 +19,16 @@ PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 TIMER = True
 SHOW_RAYS = True  # to draw rays from origin to eah obstacle-corner
 
-OBSTACLE_EDGE_SIZE = 150
-OBSTACLE_EDGES = 8  # type of polygon is determined by the number of edges:
-# 3 = triangle, 4 = square, 5 = pentagon, 6 = hexagon etc.
+# type of polygon is determined by the number of edges: 3 = triangle,
+# 4 = square, 5 = pentagon, 6 = hexagon etc.
+OBSTACLE_EDGES = 3
+# size of obstacles and distance between them is determined by this variable
+# (smaller the size, more obstacles would be drawn!):
+OBSTACLE_EDGE_SIZE = 100
 
 # constants:
+pygame.init()
+FONT = pygame.freetype.SysFont("Garamond", 20)
 SCREEN_W = 1000
 SCREEN_H = 1000
 TITLE = "Visibility algorithm demo"
@@ -39,16 +44,10 @@ LIGHT = (192, 192, 192)
 GREY = arcade.color.GRAY
 BLACK = (0, 0, 0)
 SHADOW = arcade.color.DARK_GRAY
-pygame.init()
-FONT = pygame.freetype.SysFont("Garamond", 20)
 
-view_left, view_bottom = 0, 0
-r_random = random.random
 get_time = time.perf_counter
-draw_line = arcade.draw_line
-draw_polygon_filled = arcade.draw_polygon_filled
-draw_ellipse_outline = arcade.draw_ellipse_outline
-SpriteList = arcade.SpriteList
+draw = pygame.draw
+draw_text = FONT.render_to
 
 
 def timer(func):
@@ -95,34 +94,35 @@ def redraw_screen(light, obstacles):
 
 def draw_intersection(intersector, second_segemnt):
     color = RED if intersects(intersector, second_segemnt) else WHITE
-    pygame.draw.line(window, color, *intersector)
-    pygame.draw.line(window, color, *second_segemnt)
+    draw.line(window, color, *intersector)
+    draw.line(window, color, *second_segemnt)
 
 
 def draw_obstacles(obstacles):
     for obstacle in obstacles:
-        pygame.draw.polygon(window, BLACK, obstacle)
-        for corner in obstacle:
-            pos = (corner[0]+15, corner[1]+15)
-            FONT.render_to(window, pos, str(obstacle.index(corner)), WHITE)
+        draw.polygon(window, BLACK, obstacle)
+        # for corner in obstacle:
+        #     # pos = (corner[0]+15, corner[1]+15)
+        #     # draw_text(window, pos, str(obstacle.index(corner)), WHITE)
 
 
 # @timer
 def draw_light(light):
     if len(light.light_polygon) > 2:
-        pygame.draw.polygon(window, LIGHT, light.light_polygon)
+        draw.polygon(window, LIGHT, light.light_polygon)
 
     if SHOW_RAYS:
         for r in light.rays:
-            # color = RED if light.rays.index(r) == 0 else WHITE
-            pygame.draw.line(window, WHITE, (r[0][0], r[0][1]), (r[1][0], r[1][1]))
+            color = RED if light.rays.index(r) == 0 else WHITE
+            draw.line(window, color, (r[0][0], r[0][1]), (r[1][0], r[1][1]))
             index = light.rays.index(r)
-            FONT.render_to(window, r[1], str(index), WHITE)
+            # draw_text(window, r[1], str(index), WHITE)
 
     pygame.draw.circle(window, SUN, (light.x, light.y), 10)
 
 
 def new_obstacle(i, j):
+    """Produce obstacle (polygon) of any size and number of vertices."""
     obstacle = []
     for k in range(OBSTACLE_EDGES):
         angle = (k - 1) * (360 // OBSTACLE_EDGES)
@@ -143,25 +143,32 @@ def create_obstacles():
 
 
 def main_loop():
-    run = True
+    run, drag_light = True, True
     obstacles = create_obstacles()
     light = Light(SCREEN_W//2, SCREEN_H//2, obstacles)
 
     while run:
-        light.update_visible_polygon()
+        redraw_screen(light, obstacles)  # draw previous frame
+        if drag_light:
+            light.update_visible_polygon()
         for event in pygame.event.get():
             event_type = event.type
-            if event_type == pygame.QUIT:
+            if event_type == pygame.MOUSEMOTION:
+                if drag_light:
+                    on_mouse_motion(*event.pos, light)
+            elif event_type == pygame.MOUSEBUTTONDOWN:
+                drag_light = drag_or_drop(drag_light)
+            elif event_type == pygame.QUIT:
                 run = False
                 pygame.quit()
-            elif event_type == pygame.MOUSEMOTION:
-                on_mouse_motion(*event.pos, light)
-
-        redraw_screen(light, obstacles)
 
 
 def on_mouse_motion(x, y, light):
     light.move_to(x, y)
+
+
+def drag_or_drop(drag_light):
+    return True if not drag_light else False
 
 
 if __name__ == "__main__":

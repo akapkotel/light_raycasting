@@ -6,21 +6,12 @@ especially speeds, positions, paths and level-topography-handling.
 
 import math
 from enum import Enum
-from shapely import speedups
-from shapely.geometry import Point, LineString, Polygon
 from main import timer, SCREEN_H, SCREEN_W
 
-
+SIGMA = 0.00001
 UL, UR, LL, LR = "UL", "UR", "LL", "LR"
 UPPER, LOWER, LEFT, RIGHT, DIAGONAL = "UPPER", "LOWER", "LEFT", "RIGHT", "DIAG"
 VERTICALLY, HORIZONTALLY = "VERTICALLY", "HORIZONTALLY"
-view_left, view_bottom = 0, 0
-
-
-if speedups.available:
-    speedups.enable()
-else:
-    print("Speedups could not be initialized.")
 
 
 def distance_2d(coord_a: tuple or list, coord_b: tuple or list):
@@ -234,8 +225,8 @@ class Light:
 
         # our algorithm does not check against whole polygons-obstacles, but
         # against each of their edges:
-        self.walls = self.screen_borders_to_walls() + self.obstacles_to_walls()
-        # self.walls_linestrings = self.create_linestrings()
+        self.border_walls = self.screen_borders_to_walls()
+        self.walls = self.border_walls + self.obstacles_to_walls()
 
         # we need obstacle's corners to emit rays from origin to them:
         self.corners_open_walls = {}
@@ -257,7 +248,6 @@ class Light:
         east_border = ((SCREEN_H, SCREEN_W), (0, SCREEN_W))
         south_border = ((0, SCREEN_W), (0, 0))
         west_border = ((0, 0), (SCREEN_H, 0))
-
         return north_border, east_border, south_border, west_border
 
     def obstacles_to_walls(self):
@@ -283,12 +273,6 @@ class Light:
 
         return tuple(walls)
 
-    def create_linestrings(self):
-        walls_linestrings = {}
-        for wall in self.walls:
-            walls_linestrings[wall] = LineString(wall)
-        return walls_linestrings
-
     def find_corners(self):
         walls = self.walls
         corners = []
@@ -311,23 +295,29 @@ class Light:
         a list of points. Each frame list is updated accordingly to the
         position of the Light
         """
-        origin = (self.x, self.y)  # point from which we shot rays
+        origin = (self.x, self.y)  # point from which we will shot rays
 
         corners = self.corners[::]
 
         # order corners in clockwise order by angle to the origin:
         corners.sort(key=lambda c: calculate_angle(origin, c))
 
-        rays = self.cast_rays_to_corners(origin, corners)
-        print(f"Number of rays: {len(rays)}")
         walls = [w for w in self.walls]
+        # sorting walls according to their distance to origin allows for
+        # faster finding rays intersections and avoiding iterating through
+        # whole list of the walls:
         walls.sort(key=lambda w: distance_2d(origin, w[0]) + distance_2d(
             origin, w[1]))
+
+        rays = self.cast_rays_to_corners(origin, corners)
+        print(f"Number of rays: {len(rays)}")
+
         # walls_linestrings = self.walls_linestrings
 
         corners_open_walls = self.corners_open_walls
         corners_close_walls = self.corners_close_walls
         colliding = []
+        offset_rays = []
         for ray in rays:
             # ray_line = LineString(ray)
             corner = ray[1]
@@ -346,20 +336,33 @@ class Light:
                     if both_walls is None:  # additional around-corner ray
                         colliding.append(ray)
                         new_ray_end = get_intersection(*ray, *wall)
-                        rays.append((origin, new_ray_end))
+                        offset_rays.append((origin, new_ray_end))
                     elif wall not in both_walls:
                         colliding.append(ray)
                     break
 
-        rays = [r for r in rays if r not in colliding]
-        print(f"Number of rays: {len(self.rays)}")
-        self.light_polygon = [r[1] for r in rays]
+        rays = [r for r in rays if r not in colliding] + offset_rays
+        # need to sort rays by their ending angle agin because offset_rays
+        # unsorted and pushed at the end of the list:
+        rays.sort(key=lambda r: calculate_angle(origin, r[1]))
         self.rays = rays
+        print(f"Number of rays: {len(self.rays)}")
+
+        # finally, we build a visibility polygon using endpoint of each ray:
+        self.light_polygon = [r[1] for r in rays]
 
     @staticmethod
     def cast_rays_to_corners(origin, corners):
         rays = []
         for corner in corners:
             rays.append((origin, corner))
-            # TODO: two additional rays sweeping around corners [ ][ ]
+            angle = calculate_angle(origin, corner)
+
+            end_a = move_along_vector(origin, 1500,
+                                      angle=-angle + SIGMA)
+            end_b = move_along_vector(origin, 1500,
+                                      angle=-angle - SIGMA)
+
+            rays.extend([(origin, end_a), (origin, end_b)])
+
         return rays
