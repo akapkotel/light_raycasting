@@ -16,11 +16,11 @@ VERTICALLY, HORIZONTALLY = "VERTICALLY", "HORIZONTALLY"
 
 def distance_2d(coord_a: tuple or list, coord_b: tuple or list):
     """
-    Calculate distance between two points in 2D space.
+    Calculate distance between two points_list in 2D space.
 
     :param coord_a: tuple -- (x, y) coords of first point
     :param coord_b: tuple -- (x, y) coords of second p
-    :return: float -- 2-dimensional distance between points
+    :return: float -- 2-dimensional distance between points_list
     """
     side_x = abs(coord_a[0] - coord_b[0]) ** 2
     side_y = abs(coord_a[1] - coord_b[1]) ** 2
@@ -29,7 +29,7 @@ def distance_2d(coord_a: tuple or list, coord_b: tuple or list):
 
 def close_enough(coord_a: tuple, coord_b: tuple, distance: float):
     """
-    Calculate distance between two points in 2D space and find if distance
+    Calculate distance between two points_list in 2D space and find if distance
     is less than minimum distance.
 
     :param coord_a: tuple -- (x, y) coords of first point
@@ -76,13 +76,24 @@ def quadrant(coordinates: tuple, center: tuple):
     :param center: tuple -- coordinates of center point of polygon
     :return: str -- name of quadrant ('UL', "UR', 'LL', "LR')
     """
-    if coordinates[0] < center[0] and coordinates[1] > center[1]:
-        return Quadrant.UL
-    elif coordinates[0] < center[0] and coordinates[1] < center[1]:
-        return Quadrant.LL
-    elif coordinates[0] > center[0] and coordinates[1] > center[1]:
-        return Quadrant.UR
-    return Quadrant.LR
+    if coordinates[0] < center[0]:
+        if coordinates[1] > center[1]:
+            return Quadrant.UL
+        else:
+            return Quadrant.LL
+    else:
+        if coordinates[1] > center[1]:
+            return Quadrant.UR
+        else:
+            return Quadrant.LR
+
+    # if coordinates[0] < center[0] and coordinates[1] > center[1]:
+    #     return Quadrant.UL
+    # elif coordinates[0] < center[0] and coordinates[1] < center[1]:
+    #     return Quadrant.LL
+    # elif coordinates[0] > center[0] and coordinates[1] > center[1]:
+    #     return Quadrant.UR
+    # return Quadrant.LR
 
 
 def move_along_vector(start: tuple,
@@ -96,8 +107,8 @@ def move_along_vector(start: tuple,
     'target' position, you can pass starting 'angle' of the vector.
 
     Use 'target' position only, when you now the point and do not know the
-    angle between two points, but want quickly calculate position of the
-    another point lying on the line connecting two, known points.
+    angle between two points_list, but want quickly calculate position of the
+    another point lying on the line connecting two, known points_list.
 
     :param start: tuple -- point from vector starts
     :param target: tuple -- target that vector 'looks at'
@@ -143,21 +154,28 @@ def cross_product(a, b):
     return a[0] * b[0] - b[1] * a[1]
 
 
-def ccw(points):
+def ccw(points_list):
     """
-    :param points: list
+    Check if points from list are ordered counter-clockwise.
+
+    :param points_list: list
     :return: bool
     """
     total = 0
-    count = len(points)
+    count = len(points_list)
     for i in range(count):
-        a = points[i]
-        b = points[(i + 1) % count]
+        a = points_list[i]
+        b = points_list[(i + 1) % count]
         total += (b[0] - a[0]) * (b[1] + a[1])
     return total > 0
 
 
 def get_bounding_box(segment):
+    """
+    Helper function for obtaining a bounding box of segment. Allows fast
+    checking if two segments intersects. It is known that if bounding boxes
+    of two segments do not intersect, segments do not intersect either.
+    """
     box = [
         (min(segment[0][0], segment[1][0]), min(segment[0][1], segment[1][1])),
         (max(segment[0][0], segment[1][0]), max(segment[0][1], segment[1][1]))]
@@ -169,8 +187,8 @@ def intersects(a, b):
     If segment_a is [A, B] and segment_b is [C, D] then segments intersects if
     [A, B, D] is clockwise and [A, B, C] is counter-clockwise, or vice versa.
 
-    :param a: list of tuples -- points of first segment
-    :param b: list of tuples -- points of second segment
+    :param a: list of tuples -- points_list of first segment
+    :param b: list of tuples -- points_list of second segment
     :return: bool
     """
     def do_boxes_intersect(a, b, c, d):
@@ -178,7 +196,7 @@ def intersects(a, b):
 
     a, b, c, d = a[0], a[1], b[0], b[1]
 
-    if are_in_line(a, b, c):
+    if are_points_in_line(a, b, c):
         return True
 
     if not do_boxes_intersect(*get_bounding_box((a, b)), *get_bounding_box((c, d))):
@@ -187,7 +205,7 @@ def intersects(a, b):
     return ccw((a, b, c)) != ccw((a, b, d)) and ccw((c, d, b)) != ccw((c, d, a))
 
 
-def are_in_line(a, b, c):
+def are_points_in_line(a, b, c):
     return calculate_angle(a, b) == calculate_angle(a, c) and distance_2d(a, b) >= distance_2d(a, c)
 
 
@@ -196,18 +214,6 @@ class Quadrant(Enum):
     UR = "upper_right"
     LL = "lower_left"
     LR = "lower_right"
-
-
-class Corner:
-
-    def __init__(self, x, y, wall):
-        self.x = x
-        self.y = y
-        self.wall = wall
-
-    @property
-    def position(self):
-        return self.x, self.y
 
 
 class Light:
@@ -252,7 +258,7 @@ class Light:
 
     def obstacles_to_walls(self):
         """
-        Each obstacle should be a polygon, which is a list of points
+        Each obstacle should be a polygon, which is a list of points_list
         represented by tuples (x, y) ordered counter-clockwise. We detect
         each pair of vertices which belong top same edge of polygon and add
         them as new wall which is later checked if it intersects with
@@ -292,7 +298,7 @@ class Light:
     def update_visible_polygon(self):
         """
         Field of view or lit area is represented by polygon which is basically
-        a list of points. Each frame list is updated accordingly to the
+        a list of points_list. Each frame list is updated accordingly to the
         position of the Light
         """
         origin = (self.x, self.y)  # point from which we will shot rays
@@ -309,7 +315,7 @@ class Light:
         walls.sort(key=lambda w: distance_2d(origin, w[0]) + distance_2d(
             origin, w[1]))
 
-        rays = self.cast_rays_to_corners(origin, corners)
+        rays = self.cast_rays_to_corners(origin, corners, walls)
         print(f"Number of rays: {len(rays)}")
 
         corners_open_walls = self.corners_open_walls
@@ -317,11 +323,11 @@ class Light:
         colliding = []
         offset_rays = []
         for ray in rays:
-            corner = ray[1]
+            ending = ray[1]
 
-            if corner in corners:  # check if it is ray shot at obstacle corner
-                ray_opens = corners_open_walls[corner]
-                ray_closes = corners_close_walls[corner]
+            if ending in corners:  # check if it is ray shot at obstacle corner
+                ray_opens = corners_open_walls[ending]
+                ray_closes = corners_close_walls[ending]
                 both_walls = {ray_opens, ray_closes}
             else:
                 both_walls = None
@@ -346,8 +352,7 @@ class Light:
         # finally, we build a visibility polygon using endpoint of each ray:
         self.light_polygon = [r[1] for r in rays]
 
-    @staticmethod
-    def cast_rays_to_corners(origin, corners):
+    def cast_rays_to_corners(self, origin, corners, walls):
         """
         Create a 'ray' connecting origin with each corner (obstacle vertex) on
         the screen. Ray is a tuple of two (x, y) coordinates used later to
@@ -357,17 +362,30 @@ class Light:
         :param corners: list
         :return: list
         """
-
         rays = []
+        corners_open_walls = self.corners_open_walls
+        corners_close_walls = self.corners_close_walls
+
         for corner in corners:
-            rays.append((origin, corner))
+            ray = (origin, corner)
+            new_rays = [ray]
             angle = calculate_angle(origin, corner)
+            begins, ends = corners_open_walls[corner], corners_close_walls[corner]
 
-            end_a = move_along_vector(origin, 1500,
-                                      angle=-angle + SIGMA)
-            end_b = move_along_vector(origin, 1500,
-                                      angle=-angle - SIGMA)
+            # additional rays to search behind the corners:
+            end_a = move_along_vector(origin, 1500, angle=-angle + SIGMA)
+            end_b = move_along_vector(origin, 1500, angle=-angle - SIGMA)
+            offset_ray_a, offset_ray_b = None, None
 
-            rays.extend([(origin, end_a), (origin, end_b)])
+            if ccw((origin, corner, begins[1])):
+                offset_ray_a = (origin, end_b)
+            if not ccw((origin, corner, ends[0])):
+                offset_ray_b = (origin, end_a)
 
+            if offset_ray_a is not None:
+                new_rays.insert(0, offset_ray_a)
+            if offset_ray_b is not None:
+                new_rays.append(offset_ray_b)
+
+            rays.extend(new_rays)
         return rays

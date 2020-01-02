@@ -14,7 +14,7 @@ SHOW_RAYS = True  # to draw rays from origin to eah obstacle-corner
 
 # type of polygon is determined by the number of edges: 3 = triangle,
 # 4 = square, 5 = pentagon, 6 = hexagon etc.
-OBSTACLE_EDGES = 6
+OBSTACLE_EDGES = 8
 # size of obstacles and distance between them is determined by this variable
 # (smaller the size, more obstacles would be drawn!):
 OBSTACLE_EDGE_SIZE = 100
@@ -25,7 +25,6 @@ FONT = pygame.freetype.SysFont("Garamond", 20)
 SCREEN_W = 1000
 SCREEN_H = 1000
 TITLE = "Visibility algorithm demo"
-FPS = 30
 RED = (255, 0, 0)
 SUN = (100, 150, 100)
 WHITE = (255, 255, 255)
@@ -143,6 +142,7 @@ def main_loop():
                     on_mouse_motion(*event.pos, light)
             elif event_type == pygame.MOUSEBUTTONDOWN:
                 drag_light = drag_or_drop(drag_light)
+                on_mouse_motion(*event.pos, light)
             elif event_type == pygame.QUIT:
                 run = False
                 pygame.quit()
