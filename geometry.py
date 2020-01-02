@@ -5,83 +5,22 @@ especially speeds, positions, paths and level-topography-handling.
 """
 
 import math
-
 from enum import Enum
 from shapely import speedups
 from shapely.geometry import Point, LineString, Polygon
-from arcade import check_for_collision
-from main import SCREEN_W, SCREEN_H, Obstacle
+from main import timer, SCREEN_H, SCREEN_W
+
 
 UL, UR, LL, LR = "UL", "UR", "LL", "LR"
 UPPER, LOWER, LEFT, RIGHT, DIAGONAL = "UPPER", "LOWER", "LEFT", "RIGHT", "DIAG"
 VERTICALLY, HORIZONTALLY = "VERTICALLY", "HORIZONTALLY"
 view_left, view_bottom = 0, 0
 
-nodes = {}
-obstacles = []
-meshes = {}
 
-speedups.enable()
-
-
-class Quadrant(Enum):
-    UL = "upper_left"
-    UR = "upper_right"
-    LL = "lower_left"
-    LR = "lower_right"
-
-
-def visible(position_a: tuple,
-            position_b: tuple,
-            obstacles_: list,
-            for_lighting: bool = False):
-    """
-    Check if position_a is 'visible' from position_b and vice-versa. 'Visible'
-    means, that you can connect both points with straight line without
-    intersecting any obstacle.
-
-    :param position_a: tuple -- coordinates of first position (x, y)
-    :param position_b: tuple -- coordinates of second position (x, y)
-    :param obstacles_: list -- Obstacle objects to check against
-    :param for_lighting: bool -- use this only with calls from 'lighting'
-    module
-    :return: tuple -- (bool, list)
-    """
-    line = LineString([position_a, position_b])
-    if for_lighting:
-        if isinstance(obstacles_[0], LineString):
-            visible_ = [line.crosses(line) for line in obstacles_]
-        else:  # checking against Polygons:
-            visible_ = [Polygon(o.points).crosses(line) for o in obstacles_]
-        return not any(visible_)
-    if isinstance(obstacles_[0], LineString):
-        visible_ = [line.crosses(line) for line in obstacles_]
-    else:
-        visible_ = [Polygon(o.points).crosses(line) for o in obstacles_]
-    return not any(visible_)
-
-
-def all_visible_from(position: tuple,
-                     to_check: tuple,
-                     obstacles_: list,
-                     for_lighting: bool = False):
-    """
-    Check if for this position, all positions enumarated in "to_check" list,
-    are 'visible". It just iteratively calls visible() function above for each
-    element of 'to_check' list.
-
-    :param position: tuple -- postion from visibility check is executed
-    :param to_check: list -- list of coordinates to check visibility
-    :param obstacles_: list -- all obstacles to be taken for account
-    :param for_lighting: bool -- use this only with calls from 'lighting'
-    module
-    :return: tuple: (bool, list) -- bool says if all coords from
-    'to_check' are visible from 'position' and list contains all elements
-    which passed the test
-    """
-    visible_list = [t for t in to_check if visible(position, t, obstacles_,
-                                                   for_lighting)]
-    return len(visible_list) == len(to_check), visible_list
+if speedups.available:
+    speedups.enable()
+else:
+    print("Speedups could not be initialized.")
 
 
 def distance_2d(coord_a: tuple or list, coord_b: tuple or list):
@@ -136,20 +75,6 @@ def calculate_angle(start: tuple, end: tuple):
     return math.degrees(radians) % 360
 
 
-def half(coords_a: tuple, coords_b: tuple, center: tuple):
-    """
-    Find if both coordinates lie in the same half of space (left, right,
-    upper or bottom). Halves are placed by setting center point coordinate.
-
-    :return: str -- name of the shared half of space
-    """
-    if coords_a[0] < center[0] and coords_b[0] < center[0]: return LEFT
-    if coords_a[0] > center[0] and coords_b[0] > center[0]: return RIGHT
-    if coords_a[1] < center[1] and coords_b[1] < center[1]: return LOWER
-    if coords_a[1] > center[1] and coords_b[1] > center[1]: return UPPER
-    return DIAGONAL
-
-
 def quadrant(coordinates: tuple, center: tuple):
     """
     Check in which quadrant coordinates lie counted from upper-left to
@@ -167,119 +92,6 @@ def quadrant(coordinates: tuple, center: tuple):
     elif coordinates[0] > center[0] and coordinates[1] > center[1]:
         return Quadrant.UR
     return Quadrant.LR
-
-
-def is_position_inside_area(coordinates: tuple or list, area: tuple or list):
-    """
-    Check if provided point (x, y) is located inside of the provided area
-    (polygon made of points).
-
-    :param coordinates: tuple -- (x, y) coords of the point\
-    :param area: tuple of tuples -- array of coordinates (x, y) bounding area
-    :return: bool -- if point lies inside area
-    """
-    return Polygon(area).covers(Point(coordinates))
-
-
-def is_object_on_screen(id_: int = None, points: tuple = None):
-    """
-    Check if object identified by id_ parameter in meshes dict or just a
-    Polygon made of points tuple provided, lies in boundaries of the screen
-    or out of it.
-
-    :param id_: int -- id attribute of Obstacle instance
-    :param points: tuple -- list of points to build Polygon from
-    :return: bool -- if object lies inside the screen
-    """
-    screen_points = [
-        (view_left, view_bottom),
-        (view_left, view_bottom + SCREEN_H),
-        (view_left + SCREEN_W, view_bottom + SCREEN_H),
-        (view_left + SCREEN_W, view_bottom)
-        ]
-    screen = Polygon(screen_points)
-    if id_ is not None:
-        return screen.intersects(meshes[id_])
-    return screen.intersects(Polygon(points))
-
-
-def add_to_level_geometry(obstacle: Obstacle):
-    """
-    Add new geometric representation of Obstacle to the meshes hashtable.
-    Each element in dict is hashable with it's 'id'.
-
-    :param obstacle: Obstacle -- instance of Obstacle class spawned in game
-    """
-    if obstacle.id not in meshes:
-        obstacles.append(obstacle)
-        meshes[obstacle.id] = Polygon(obstacle.points)
-
-
-def update_in_level_geometry(obstacle: Obstacle):
-    """
-    Updates position and angle of polygon in meshes. Call it when
-    Obstacle changed it's position or angle in game.
-    """
-    meshes[obstacle.id] = Polygon(obstacle.points)
-
-
-def remove_from_level_geometry(obstacle: Obstacle):
-    """
-    Remove Obstacle instance from meshes dict.
-
-    :param obstacle: Obstacle -- object to be removed
-    """
-    if obstacle.id in meshes:
-        del meshes[obstacle.id]
-
-
-def update_screen_coordinates(left: float, bottom: float):
-    """
-    Change internal screen-boundaries, to properly detect what part of
-    level we are. Viewport is updated in main.game, but meshes must be
-    updated too.
-    """
-    global view_left, view_bottom
-    view_left, view_bottom = left, bottom
-
-
-def detect_all_screen_collisions(this, others):
-    """
-    Check if Sprite or Cursor object collides with any other Sprite and
-    return list of colliding sprites or None.
-
-    :param this: Sprite -- sprite we need to know if collides with anything
-    :param others: LayeredSpriteList -- list of other sprites to check against
-    :return: None or list -- list of Sprites 'this' collides with
-    """
-    # we need only to check collisions with objects visible on the screen:
-    potential = [x for x in others if x.on_screen()]
-
-    if not potential:
-        return
-
-    return [other for other in potential if check_for_collision(this, other)]
-
-
-def detect_collision_on_screen(this, others, cursor):
-    """
-    Check if Sprite or Cursor object collides with any other Sprite and
-    return first colliding Sprite as a result (usually faster than above).
-
-    :param this: Sprite -- sprite we need to know if collides with anything
-    :param others: LayeredSpriteList -- list of other sprites to check against
-    :param cursor: bool -- if object against which check is m ade is a cursor
-    :return: None or Sprite -- Sprite that 'this' collides with
-    """
-    # we need only to check collisions with objects visible on the screen:
-    potential = [x for x in others if x.on_screen()]
-
-    if not potential:
-        return
-
-    for other in potential:
-        if check_for_collision(this, other):
-            return other
 
 
 def move_along_vector(start: tuple,
@@ -313,3 +125,241 @@ def move_along_vector(start: tuple,
     v = calculate_vector_2d(angle, velocity)
 
     return p1[0] + v[0], p1[1] + v[1]
+
+
+def get_intersection(p1, p2, p3, p4):
+    """
+    Relatively cheap method of finding segments-intersections.
+
+    :param p1: tuple -- first point of first segment
+    :param p2: tuple -- second point of first segment
+    :param p3: tuple -- first point of second segment
+    :param p4: tuple -- second point of second segment
+    :return: tuple -- position of intersection
+    """
+    x_0 = (p1[1] - p3[1])
+    x_1 = (p4[1] - p3[1])
+    x_2 = (p1[0] - p3[0])
+    x_3 = (p2[0] - p1[0])
+    x_4 = (p2[1] - p1[1])
+    x_5 = p4[0] - p3[0]
+
+    s = ((x_5 * x_0 - x_1 * x_2) / (x_1 * x_3 - x_5 * x_4))
+    return p1[0] + s * x_3, p1[1] + s * x_4
+
+
+def cross_product(a, b):
+    return a[0] * b[0] - b[1] * a[1]
+
+
+def ccw(points):
+    """
+    :param points: list
+    :return: bool
+    """
+    total = 0
+    count = len(points)
+    for i in range(count):
+        a = points[i]
+        b = points[(i + 1) % count]
+        total += (b[0] - a[0]) * (b[1] + a[1])
+    return total > 0
+
+
+def get_bounding_box(segment):
+    box = [
+        (min(segment[0][0], segment[1][0]), min(segment[0][1], segment[1][1])),
+        (max(segment[0][0], segment[1][0]), max(segment[0][1], segment[1][1]))]
+    return box
+
+
+def intersects(a, b):
+    """
+    If segment_a is [A, B] and segment_b is [C, D] then segments intersects if
+    [A, B, D] is clockwise and [A, B, C] is counter-clockwise, or vice versa.
+
+    :param a: list of tuples -- points of first segment
+    :param b: list of tuples -- points of second segment
+    :return: bool
+    """
+    def do_boxes_intersect(a, b, c, d):
+        return a[0] <= d[0] and b[0] >= c[0] and a[1] <= c[1] <= b[1]
+
+    a, b, c, d = a[0], a[1], b[0], b[1]
+
+    if are_in_line(a, b, c):
+        return True
+
+    if not do_boxes_intersect(*get_bounding_box((a, b)), *get_bounding_box((c, d))):
+        return False
+
+    return ccw((a, b, c)) != ccw((a, b, d)) and ccw((c, d, b)) != ccw((c, d, a))
+
+
+def are_in_line(a, b, c):
+    return calculate_angle(a, b) == calculate_angle(a, c) and distance_2d(a, b) >= distance_2d(a, c)
+
+
+class Quadrant(Enum):
+    UL = "upper_left"
+    UR = "upper_right"
+    LL = "lower_left"
+    LR = "lower_right"
+
+
+class Corner:
+
+    def __init__(self, x, y, wall):
+        self.x = x
+        self.y = y
+        self.wall = wall
+
+    @property
+    def position(self):
+        return self.x, self.y
+
+
+class Light:
+    """
+    Light is a point which represents a source of light or an observer in
+    field-of-view simulation.
+    """
+
+    def __init__(self, x: int, y: int, obstacles: list):
+        self.x = x
+        self.y = y
+
+        # objects considered as blocking FOV/light:
+        self.obstacles = obstacles
+
+        # our algorithm does not check against whole polygons-obstacles, but
+        # against each of their edges:
+        self.walls = self.screen_borders_to_walls() + self.obstacles_to_walls()
+        # self.walls_linestrings = self.create_linestrings()
+
+        # we need obstacle's corners to emit rays from origin to them:
+        self.corners_open_walls = {}
+        self.corners_close_walls = {}
+        self.corners = self.find_corners()
+        print(self.corners)
+
+        self.rays = []
+
+        self.light_polygon = []
+
+    def move_to(self, x, y):
+        self.x = x
+        self.y = y
+
+    @staticmethod
+    def screen_borders_to_walls():
+        north_border = ((SCREEN_H, 0), (SCREEN_H, SCREEN_W))
+        east_border = ((SCREEN_H, SCREEN_W), (0, SCREEN_W))
+        south_border = ((0, SCREEN_W), (0, 0))
+        west_border = ((0, 0), (SCREEN_H, 0))
+
+        return north_border, east_border, south_border, west_border
+
+    def obstacles_to_walls(self):
+        """
+        Each obstacle should be a polygon, which is a list of points
+        represented by tuples (x, y) ordered counter-clockwise. We detect
+        each pair of vertices which belong top same edge of polygon and add
+        them as new wall which is later checked if it intersects with
+        visibility rays.
+        """
+        walls = []
+        for obstacle in self.obstacles:
+            vertex_count = len(obstacle)
+
+            for i in range(vertex_count):
+                segment = [obstacle[i]]
+                if i < vertex_count-1:
+                    segment.append(obstacle[i + 1])
+                else:
+                    segment.append(obstacle[0])
+                wall = tuple(segment)
+                walls.append(wall)
+
+        return tuple(walls)
+
+    def create_linestrings(self):
+        walls_linestrings = {}
+        for wall in self.walls:
+            walls_linestrings[wall] = LineString(wall)
+        return walls_linestrings
+
+    def find_corners(self):
+        walls = self.walls
+        corners = []
+
+        for wall in walls:
+            print(wall)
+            for vertex in wall:
+                if vertex not in corners:
+                    corners.append(vertex)
+                if wall.index(vertex) == 0:
+                    self.corners_open_walls[vertex] = wall
+                else:
+                    self.corners_close_walls[vertex] = wall
+        return corners
+
+    @timer
+    def update_visible_polygon(self):
+        """
+        Field of view or lit area is represented by polygon which is basically
+        a list of points. Each frame list is updated accordingly to the
+        position of the Light
+        """
+        origin = (self.x, self.y)  # point from which we shot rays
+
+        corners = self.corners[::]
+
+        # order corners in clockwise order by angle to the origin:
+        corners.sort(key=lambda c: calculate_angle(origin, c))
+
+        rays = self.cast_rays_to_corners(origin, corners)
+        print(f"Number of rays: {len(rays)}")
+        walls = [w for w in self.walls]
+        walls.sort(key=lambda w: distance_2d(origin, w[0]) + distance_2d(
+            origin, w[1]))
+        # walls_linestrings = self.walls_linestrings
+
+        corners_open_walls = self.corners_open_walls
+        corners_close_walls = self.corners_close_walls
+        colliding = []
+        for ray in rays:
+            # ray_line = LineString(ray)
+            corner = ray[1]
+
+            if corner in corners:  # check if it is ray shot at obstacle corner
+                ray_opens = corners_open_walls[corner]
+                ray_closes = corners_close_walls[corner]
+                both_walls = {ray_opens, ray_closes}
+            else:
+                both_walls = None
+
+            for wall in walls:
+                # wall_line = walls_linestrings[wall]
+                # if ray_line.intersects(wall_line):
+                if intersects(ray, wall) or intersects(wall, ray):
+                    if both_walls is None:  # additional around-corner ray
+                        colliding.append(ray)
+                        new_ray_end = get_intersection(*ray, *wall)
+                        rays.append((origin, new_ray_end))
+                    elif wall not in both_walls:
+                        colliding.append(ray)
+                    break
+
+        rays = [r for r in rays if r not in colliding]
+        print(f"Number of rays: {len(self.rays)}")
+        self.light_polygon = [r[1] for r in rays]
+        self.rays = rays
+
+    @staticmethod
+    def cast_rays_to_corners(origin, corners):
+        rays = []
+        for corner in corners:
+            rays.append((origin, corner))
+            # TODO: two additional rays sweeping around corners [ ][ ]
+        return rays

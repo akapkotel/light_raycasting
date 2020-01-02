@@ -7,6 +7,7 @@ import time
 import random
 import arcade
 import pygame
+import pygame.freetype
 
 from functools import wraps
 
@@ -17,12 +18,15 @@ PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 # debug variables:
 TIMER = True
 SHOW_RAYS = True  # to draw rays from origin to eah obstacle-corner
-USE_PYGAME = True
+
+OBSTACLE_EDGE_SIZE = 150
+OBSTACLE_EDGES = 8  # type of polygon is determined by the number of edges:
+# 3 = triangle, 4 = square, 5 = pentagon, 6 = hexagon etc.
 
 # constants:
 SCREEN_W = 1000
 SCREEN_H = 1000
-TITLE = "Ray-casting demo"
+TITLE = "Visibility algorithm demo"
 FPS = 30
 GREEN = arcade.color.GREEN
 MAP_GREEN = arcade.color.APPLE_GREEN
@@ -35,6 +39,8 @@ LIGHT = (192, 192, 192)
 GREY = arcade.color.GRAY
 BLACK = (0, 0, 0)
 SHADOW = arcade.color.DARK_GRAY
+pygame.init()
+FONT = pygame.freetype.SysFont("Garamond", 20)
 
 view_left, view_bottom = 0, 0
 r_random = random.random
@@ -55,24 +61,14 @@ def timer(func):
             return result
 
         end_time = get_time()
-        execution_time = end_time - start_time
-        fps = 1 / execution_time
-        fr = f"{func.__name__} finished in {execution_time:.4f} secs. FPS:{fps}"
+        total_time = end_time - start_time
 
+        fps = 1 // total_time
+
+        fr = f"{func.__name__} finished in {total_time:.4f} secs. FPS: {fps}"
         print(fr)
         return result
     return wrapper
-
-
-def get_image_path(filename: str):
-    """
-    Produce TESTS_PATH to the texture, which name is provided as parameter.
-
-    :param filename: str -- name of the texture file to be loaded without
-    extension
-    :return: str -- absolute TESTS_PATH of texture
-    """
-    return PATH + filename
 
 
 def new_id(class_):
@@ -89,47 +85,59 @@ def new_id(class_):
         raise AttributeError("Object passed has no class attribute: 'count'!")
 
 
-class Obstacle(arcade.Sprite):
-
-    count = 0
-
-    def __init__(self, texture: str, x: float, y: float):
-        """
-        :param texture: str -- name of the basic texture for a Sprite
-        :param x: float -- x coordinate of start position
-        :param y: float -- y coordinate
-        """
-
-        texture_ = get_image_path(texture)
-
-        super().__init__(texture_, center_x=x, center_y=y)
-        self.type_ = texture
-        self.id = new_id(Obstacle)
-        self.fixed = True
-
-
-def redraw_screen(light):
-    window.fill(BLACK)
-    if light.light_polygon:
-        draw_light(light)
+# @timer
+def redraw_screen(light, obstacles):
+    window.fill(DARK)
+    draw_obstacles(obstacles)
+    draw_light(light)
     pygame.display.update()
+
+
+def draw_intersection(intersector, second_segemnt):
+    color = RED if intersects(intersector, second_segemnt) else WHITE
+    pygame.draw.line(window, color, *intersector)
+    pygame.draw.line(window, color, *second_segemnt)
+
+
+def draw_obstacles(obstacles):
+    for obstacle in obstacles:
+        pygame.draw.polygon(window, BLACK, obstacle)
+        for corner in obstacle:
+            pos = (corner[0]+15, corner[1]+15)
+            FONT.render_to(window, pos, str(obstacle.index(corner)), WHITE)
 
 
 # @timer
 def draw_light(light):
-    pygame.draw.polygon(window, light.color, light.light_polygon)
-    pygame.draw.circle(window, RED, (light.x, light.y), 10)
+    if len(light.light_polygon) > 2:
+        pygame.draw.polygon(window, LIGHT, light.light_polygon)
+
     if SHOW_RAYS:
         for r in light.rays:
-            pygame.draw.line(window, RED, (r[0][0], r[0][1]), (r[1][0], r[1][1]))
+            # color = RED if light.rays.index(r) == 0 else WHITE
+            pygame.draw.line(window, WHITE, (r[0][0], r[0][1]), (r[1][0], r[1][1]))
+            index = light.rays.index(r)
+            FONT.render_to(window, r[1], str(index), WHITE)
+
+    pygame.draw.circle(window, SUN, (light.x, light.y), 10)
+
+
+def new_obstacle(i, j):
+    obstacle = []
+    for k in range(OBSTACLE_EDGES):
+        angle = (k - 1) * (360 // OBSTACLE_EDGES)
+        offset = 180 // OBSTACLE_EDGES
+        point = move_along_vector((i, j), OBSTACLE_EDGE_SIZE, angle=angle-offset)
+        obstacle.append(point)
+    return obstacle
 
 
 def create_obstacles():
-    obstacles = []  # SpriteList()
-    for i in range(200, SCREEN_W, 500):
-        for j in range(200, SCREEN_H, 500):
-            # obstacle = Obstacle("light_obstacle.png", i, j)
-            obstacle = [(i, j), (i+200, j), (i+200, j+250), (i, j+250)]
+    obstacles = []
+    size = OBSTACLE_EDGE_SIZE
+    for i in range(size*2, SCREEN_W, size*3):
+        for j in range(size*2, SCREEN_H, size*3):
+            obstacle = new_obstacle(i, j)
             obstacles.append(obstacle)
     return obstacles
 
@@ -137,11 +145,10 @@ def create_obstacles():
 def main_loop():
     run = True
     obstacles = create_obstacles()
-    light = Light(SCREEN_W//2, SCREEN_H//2, 0, obstacles)
+    light = Light(SCREEN_W//2, SCREEN_H//2, obstacles)
 
     while run:
-        light.update_light()
-        # print(light.light_polygon)
+        light.update_visible_polygon()
         for event in pygame.event.get():
             event_type = event.type
             if event_type == pygame.QUIT:
@@ -150,106 +157,17 @@ def main_loop():
             elif event_type == pygame.MOUSEMOTION:
                 on_mouse_motion(*event.pos, light)
 
-        redraw_screen(light)
+        redraw_screen(light, obstacles)
 
 
 def on_mouse_motion(x, y, light):
-    light.x, light.y = x, y
-
-
-# Arcade version:
-class Application(arcade.Window):
-    """Application application class."""
-
-    def __init__(self, screen_w, screen_h, title, update_rate):
-        super().__init__(screen_w, screen_h, title, update_rate=update_rate)
-        self.set_mouse_visible(False)
-
-        self.lights = None
-        self.obstacles = None
-
-        self.units = None
-        self.obstacles = None
-
-        self.setup()
-
-    def setup(self):
-        """Set all attributes to default values."""
-        self.lights = []
-        self.obstacles = []
-
-        for i in range(200, SCREEN_W, 500):
-            for j in range(200, SCREEN_H, 500):
-                obstacle = [(i, j), (i + 200, j), (i + 200, j + 200),(i, j + 200)]
-                self.obstacles.append(obstacle)
-
-        light = Light(600, 500, 3, obstacles=self.obstacles, power=1500)
-        self.lights.append(light)
-
-    def spawn(self, spawned):
-        """
-        Use this method to create new instances of each in-game object to
-        assure, that it would be appended to correct SpriteList or ordinary
-        list and avoid adding them in additional lines. It also assures that
-        obstacles are registered in level geometry.
-        """
-        lists = {"obstacles": [], "lights": []}
-
-        if isinstance(spawned, Obstacle):
-            lists["obstacles"].append(spawned)
-        if isinstance(spawned, Light):
-            lists["lights"].append(spawned)
-        for key, value in lists.items():
-            for spawned in set(value):  # set used to avoid duplicates
-                self.__dict__[key].append(spawned)
-        return spawned
-
-    def on_update(self, delta_time: float):
-        self.update_lights()
-        self.obstacles.update()
-
-    def update_lights(self):
-        for light in self.lights:
-            light.update()
-
-    def on_draw(self):
-        arcade.start_render()
-        # self.obstacles.draw()
-        self.draw_lights()
-
-    @timer
-    def draw_lights(self):
-        """Draw bright polygon which simulates light."""
-        for light in self.lights:
-            if light.light_polygon:
-                draw_polygon_filled(light.light_polygon, light.color)
-                draw_ellipse_outline(light.x, light.y, 10, 10, BLACK)
-            if SHOW_RAYS:
-                for r in light.rays:
-                    draw_line(r[0][0], r[0][1], r[1][0], r[1][1], RED)
-
-    def on_mouse_motion(self, x: float, y: float, dx: float, dy: float):
-        """Handle the mouse movements."""
-        x, y = x + view_left, y + view_bottom
-
-        for light in self.lights:
-            light.x = x + view_bottom
-            light.y = y + view_left
-
-
-def run_app():
-    """Entry point."""
-    application = Application(SCREEN_W, SCREEN_H, TITLE, update_rate=FPS)
-    application.set_update_rate(1 / FPS)
-    arcade.set_background_color(DARK)
-    arcade.run()
+    light.move_to(x, y)
 
 
 if __name__ == "__main__":
-    from lighting import Light  # do not move this to the top!
-    if USE_PYGAME:
-        window = pygame.display.set_mode((SCREEN_W, SCREEN_H))
-        pygame.display.set_caption("Visibility algorithm")
-        main_loop()
-    else:
-        run_app()
+    from geometry import Light, intersects, move_along_vector # do not move this to the
+    # top!
+    window = pygame.display.set_mode((SCREEN_W, SCREEN_H))
+    pygame.display.set_caption(TITLE)
+    main_loop()
+
