@@ -1,8 +1,6 @@
-arcade==2.0.9
 pygame==1.9.6
 future==0.17.1
 numpy==1.16.4
 Pillow==6.2.1
 pyglet==1.4.0b1
 pyglet-ffmpeg2==0.1.12
-Shapely==1.6.4.post2

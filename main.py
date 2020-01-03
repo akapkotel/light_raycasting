@@ -3,10 +3,10 @@
 
 """
 import time
-import pygame
-import pygame.freetype
 from functools import wraps
 
+import pygame
+import pygame.freetype
 
 # debug variables:
 TIMER = True
@@ -17,10 +17,10 @@ SHOW_RAYS = True
 CLOSEST_WALL = False
 # type of polygon is determined by the number of edges: 3 = triangle,
 # 4 = square, 5 = pentagon, 6 = hexagon etc.
-OBSTACLE_EDGES = 3
+OBSTACLE_EDGES = 6
 # size of obstacles and distance between them is determined by this variable
 # (smaller the size, more obstacles would be drawn!):
-OBSTACLE_EDGE_SIZE = 150
+OBSTACLE_EDGE_SIZE = 100
 
 # constants:
 pygame.init()
@@ -127,7 +127,7 @@ def new_obstacle(i, j):
 
 
 def create_obstacles():
-    obstacles = []
+    obstacles, bounding_boxes = [], []
     size = OBSTACLE_EDGE_SIZE
     for i in range(size*2, SCREEN_W, size*3):
         for j in range(size*2, SCREEN_H, size*3):
@@ -163,12 +163,13 @@ def on_mouse_motion(x, y, light):
 
 
 def drag_or_drop(drag_light):
-    return True if not drag_light else False
+    return not drag_light
 
 
 if __name__ == "__main__":
-    from geometry import Light, intersects, move_along_vector # do not move this to the
-    # top!
+    # do not move these imports to the top!
+    from geometry import Light, intersects, move_along_vector
+
     window = pygame.display.set_mode((SCREEN_W, SCREEN_H))
     pygame.display.set_caption(TITLE)
     main_loop()

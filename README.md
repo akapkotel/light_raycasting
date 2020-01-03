@@ -1,4 +1,4 @@
-# Visibility/raycasting algorithm
+# Visibility/light raycasting algorithm
 
 Visibility/light-raycasting algorithm python implementation inspired by: https://www.redblobgames.com/articles/visibility/
 
@@ -16,6 +16,12 @@ Installation and running:
 4. Run main.py in any IDE, e.g. PyCharm, or in Terminal.
 5. In main.py in section "#debug variables" you can change value of TIMER boolean to False if you want disable measuring execution time (default is True), and SHOW_RAYS to True if you want see how many raycasts are drawn each frame (default is False).
 6. Size and shape of obstacles could be modified by changing OBSTACLE_EDGES variable value: 3 makes triangles, 4 squares, 5 pentagons etc. Variable OBSTACLE_EDGE_SIZE controlls not only size of obstacles, but also distances between them.
+
+For exampole. if you set edges to 3, and size to 150 you will get 4 triangles:
+![Triangles](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_3.png)
+
+Setting edges to 6 and size to 50 would produce:
+![Hexagons](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_2.png)
 
 It requires more optimizations:
 
@@ -35,7 +41,7 @@ It requires more optimizations:
 To be done:
 
 1. Optimizations listed above.
-2. Customization: changing amount and positioning of obstacles.
+2. Add option to move position of obstacles when app is running.
 3. Replacing single-colored "lit" polygon with gradient to simulate diminishing power of light. It could force me to replace arcade library with something else, since arcade does not allow draw gradient-polygons in real-time.
 4. Adding this project to my Django blog (when it is also finished).
 
@@ -46,7 +52,9 @@ Changelog:
 1. Replaced arcade library with pygame for faster draw-calls.
 2. Replaced shapely-calls with simpler geometric functions.
 3. Optimizations allowed simulation of more obstacles and/or polygons with more vertices without loss of the speed.
+4. Customization: changing amount and shape of obstacles.
 
 ----
 
 Rafał "Akapkotel" Trąbski
+
