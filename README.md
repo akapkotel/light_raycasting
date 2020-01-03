@@ -17,6 +17,12 @@ Installation and running:
 5. In main.py in section "#debug variables" you can change value of TIMER boolean to False if you want disable measuring execution time (default is True), and SHOW_RAYS to True if you want see how many raycasts are drawn each frame (default is False).
 6. Size and shape of obstacles could be modified by changing OBSTACLE_EDGES variable value: 3 makes triangles, 4 squares, 5 pentagons etc. Variable OBSTACLE_EDGE_SIZE controlls not only size of obstacles, but also distances between them.
 
+For exampole. if you set edges to 3, and size to 150 you will get 4 triangles:
+![Triangles](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_3.png)
+
+Setting edges to 6 and size to 50 would poroduce:
+![Hexagons](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_2.png)
+
 It requires more optimizations:
 
 1. For now it works only for static obstacles - positions of polygons vertices are calculated once at the start. Dynamic   updates of obsatcles-corners would cost a lot of computing power which is already entirely consumed by raycasting.
