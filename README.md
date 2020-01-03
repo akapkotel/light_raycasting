@@ -20,7 +20,7 @@ Installation and running:
 For exampole. if you set edges to 3, and size to 150 you will get 4 triangles:
 ![Triangles](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_3.png)
 
-Setting edges to 6 and size to 50 would poroduce:
+Setting edges to 6 and size to 50 would produce:
 ![Hexagons](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_2.png)
 
 It requires more optimizations:
