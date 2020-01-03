@@ -1,4 +1,4 @@
-# Visibility/raycasting algorithm
+# Visibility/light raycasting algorithm
 
 Visibility/light-raycasting algorithm python implementation inspired by: https://www.redblobgames.com/articles/visibility/
 
@@ -41,7 +41,7 @@ It requires more optimizations:
 To be done:
 
 1. Optimizations listed above.
-2. Customization: changing amount and positioning of obstacles.
+2. Add option to move position of obstacles when app is running.
 3. Replacing single-colored "lit" polygon with gradient to simulate diminishing power of light. It could force me to replace arcade library with something else, since arcade does not allow draw gradient-polygons in real-time.
 4. Adding this project to my Django blog (when it is also finished).
 
@@ -52,6 +52,7 @@ Changelog:
 1. Replaced arcade library with pygame for faster draw-calls.
 2. Replaced shapely-calls with simpler geometric functions.
 3. Optimizations allowed simulation of more obstacles and/or polygons with more vertices without loss of the speed.
+4. Customization: changing amount and shape of obstacles.
 
 ----
 
