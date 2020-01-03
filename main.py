@@ -10,14 +10,17 @@ from functools import wraps
 
 # debug variables:
 TIMER = True
-SHOW_RAYS = True  # to draw rays from origin to eah obstacle-corner
-
+# to draw rays from origin to eah obstacle-corner:
+SHOW_RAYS = True
+# to highlight vertices of edge closest to the origin, green vertex is first
+# and red is second:
+CLOSEST_WALL = False
 # type of polygon is determined by the number of edges: 3 = triangle,
 # 4 = square, 5 = pentagon, 6 = hexagon etc.
-OBSTACLE_EDGES = 8
+OBSTACLE_EDGES = 3
 # size of obstacles and distance between them is determined by this variable
 # (smaller the size, more obstacles would be drawn!):
-OBSTACLE_EDGE_SIZE = 100
+OBSTACLE_EDGE_SIZE = 150
 
 # constants:
 pygame.init()
@@ -26,6 +29,7 @@ SCREEN_W = 1000
 SCREEN_H = 1000
 TITLE = "Visibility algorithm demo"
 RED = (255, 0, 0)
+GREEN = (0, 255, 0)
 SUN = (100, 150, 100)
 WHITE = (255, 255, 255)
 DARK = (32, 32, 32)
@@ -94,6 +98,12 @@ def draw_obstacles(obstacles):
 
 # @timer
 def draw_light(light):
+    if CLOSEST_WALL and light.closest_wall is not None:
+        pos = (int(light.closest_wall[0][0]), int(light.closest_wall[0][1]))
+        draw.circle(window, GREEN, pos, 10)
+        pos = (int(light.closest_wall[1][0]), int(light.closest_wall[1][1]))
+        draw.circle(window, RED, pos, 10)
+
     if len(light.light_polygon) > 2:
         draw.polygon(window, LIGHT, light.light_polygon)
 

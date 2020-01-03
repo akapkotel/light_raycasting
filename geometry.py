@@ -77,12 +77,12 @@ def quadrant(coordinates: tuple, center: tuple):
     :return: str -- name of quadrant ('UL', "UR', 'LL', "LR')
     """
     if coordinates[0] < center[0]:
-        if coordinates[1] > center[1]:
+        if coordinates[1] < center[1]:
             return Quadrant.UL
         else:
             return Quadrant.LL
     else:
-        if coordinates[1] > center[1]:
+        if coordinates[1] < center[1]:
             return Quadrant.UR
         else:
             return Quadrant.LR
@@ -233,7 +233,7 @@ class Light:
         # against each of their edges:
         self.border_walls = self.screen_borders_to_walls()
         self.walls = self.border_walls + self.obstacles_to_walls()
-
+        self.closest_wall = None
         # we need obstacle's corners to emit rays from origin to them:
         self.corners_open_walls = {}
         self.corners_close_walls = {}
@@ -312,19 +312,19 @@ class Light:
         # sorting walls according to their distance to origin allows for
         # faster finding rays intersections and avoiding iterating through
         # whole list of the walls:
-        walls.sort(key=lambda w: distance_2d(origin, w[0]) + distance_2d(
-            origin, w[1]))
+        walls.sort(key=lambda w: distance_2d(origin, w[0]) + distance_2d(origin, w[1]))
+        self.closest_wall = walls[0]
 
         rays = self.cast_rays_to_corners(origin, corners, walls)
         print(f"Number of rays: {len(rays)}")
 
         corners_open_walls = self.corners_open_walls
         corners_close_walls = self.corners_close_walls
-        colliding = []
+        colliding = set()  # rays which intersects any wall
         offset_rays = []
+
         for ray in rays:
             ending = ray[1]
-
             if ending in corners:  # check if it is ray shot at obstacle corner
                 ray_opens = corners_open_walls[ending]
                 ray_closes = corners_close_walls[ending]
@@ -335,11 +335,11 @@ class Light:
             for wall in walls:
                 if intersects(ray, wall) or intersects(wall, ray):
                     if both_walls is None:  # additional around-corner ray
-                        colliding.append(ray)
+                        colliding.add(ray)
                         new_ray_end = get_intersection(*ray, *wall)
                         offset_rays.append((origin, new_ray_end))
                     elif wall not in both_walls:
-                        colliding.append(ray)
+                        colliding.add(ray)
                     break
 
         rays = [r for r in rays if r not in colliding] + offset_rays
@@ -358,18 +358,21 @@ class Light:
         the screen. Ray is a tuple of two (x, y) coordinates used later to
         find which segment obstructs visibility.
         TODO: find way to emit less offset rays [ ][ ]
+        :param walls: list
         :param origin: tuple
         :param corners: list
         :return: list
         """
         rays = []
+        border_walls = self.border_walls
+        # walls = [w for w in walls if w not in border_walls]
         corners_open_walls = self.corners_open_walls
         corners_close_walls = self.corners_close_walls
 
         for corner in corners:
+            angle = calculate_angle(origin, corner)
             ray = (origin, corner)
             new_rays = [ray]
-            angle = calculate_angle(origin, corner)
             begins, ends = corners_open_walls[corner], corners_close_walls[corner]
 
             # additional rays to search behind the corners:
@@ -388,4 +391,5 @@ class Light:
                 new_rays.append(offset_ray_b)
 
             rays.extend(new_rays)
+
         return rays
