@@ -14,10 +14,10 @@ TIMER = True
 SHOW_RAYS = True
 # to highlight vertices of edge closest to the origin, green vertex is first
 # and red is second:
-CLOSEST_WALL = False
+CLOSEST_WALL = True
 # type of polygon is determined by the number of edges: 3 = triangle,
 # 4 = square, 5 = pentagon, 6 = hexagon etc.
-OBSTACLE_EDGES = 6
+OBSTACLE_EDGES = 8
 # size of obstacles and distance between them is determined by this variable
 # (smaller the size, more obstacles would be drawn!):
 OBSTACLE_EDGE_SIZE = 100
@@ -109,8 +109,8 @@ def draw_light(light):
 
     if SHOW_RAYS:
         for r in light.rays:
-            color = RED if light.rays.index(r) == 0 else WHITE
-            draw.line(window, color, (r[0][0], r[0][1]), (r[1][0], r[1][1]))
+            # color = RED if light.rays.index(r) == 0 else WHITE
+            draw.line(window, WHITE, (r[0][0], r[0][1]), (r[1][0], r[1][1]))
 
     pygame.draw.circle(window, SUN, (light.x, light.y), 10)
 
@@ -143,6 +143,7 @@ def main_loop():
 
     while run:
         redraw_screen(light, obstacles)  # draw previous frame
+
         if drag_light:
             light.update_visible_polygon()
         for event in pygame.event.get():
@@ -151,8 +152,11 @@ def main_loop():
                 if drag_light:
                     on_mouse_motion(*event.pos, light)
             elif event_type == pygame.MOUSEBUTTONDOWN:
-                drag_light = drag_or_drop(drag_light)
-                on_mouse_motion(*event.pos, light)
+                if event.button == 1:
+                    drag_light = drag_or_drop(drag_light)
+                    on_mouse_motion(*event.pos, light)
+                if event.button == 3:
+                    print("Right mouse button!")
             elif event_type == pygame.QUIT:
                 run = False
                 pygame.quit()
@@ -173,4 +177,3 @@ if __name__ == "__main__":
     window = pygame.display.set_mode((SCREEN_W, SCREEN_H))
     pygame.display.set_caption(TITLE)
     main_loop()
-

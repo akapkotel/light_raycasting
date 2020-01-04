@@ -15,7 +15,7 @@ UPPER, LOWER, LEFT, RIGHT, DIAGONAL = "UPPER", "LOWER", "LEFT", "RIGHT", "DIAG"
 VERTICALLY, HORIZONTALLY = "VERTICALLY", "HORIZONTALLY"
 
 
-def distance_2d(coord_a: tuple or list, coord_b: tuple or list):
+def distance(coord_a: tuple or list, coord_b: tuple or list):
     """
     Calculate distance between two segment in 2D space.
 
@@ -38,7 +38,7 @@ def close_enough(coord_a: tuple, coord_b: tuple, distance: float):
     :param distance: float -- minimal distance to check against
     :return: bool -- if distance is less than
     """
-    return distance_2d(coord_a, coord_b) <= distance
+    return distance(coord_a, coord_b) <= distance
 
 
 def calculate_vector_2d(angle: float, scalar: float):
@@ -87,14 +87,6 @@ def quadrant(coordinates: tuple, center: tuple):
             return Quadrant.UR
         else:
             return Quadrant.LR
-
-    # if coordinates[0] < center[0] and coordinates[1] > center[1]:
-    #     return Quadrant.UL
-    # elif coordinates[0] < center[0] and coordinates[1] < center[1]:
-    #     return Quadrant.LL
-    # elif coordinates[0] > center[0] and coordinates[1] > center[1]:
-    #     return Quadrant.UR
-    # return Quadrant.LR
 
 
 def move_along_vector(start: tuple,
@@ -225,14 +217,14 @@ def intersects(a, b):
     ccw_abc = ccw((a, b, c))
     ccw_abd = ccw((a, b, d))
     ccw_cdb = ccw((c, d, b))
-    ccw_cda = ccw ((c, d, a))
+    ccw_cda = ccw((c, d, a))
 
     return ccw_abc != ccw_abd and ccw_cdb != ccw_cda
 
 
 def are_points_in_line(a, b, c):
     return (calculate_angle(a, b) == calculate_angle(a, c) and
-            distance_2d(a, b) >= distance_2d(a, c))
+            distance(a, b) >= distance(a, c))
 
 
 class Quadrant(Enum):
@@ -264,7 +256,7 @@ class Light:
         self.corners_open_walls = {}
         self.corners_close_walls = {}
         self.corners = self.find_corners()
-        print(self.corners)
+        self.border_corners = self.get_border_corners()
 
         self.rays = []
 
@@ -286,7 +278,11 @@ class Light:
         east_border = ((SCREEN_H, SCREEN_W), (0, SCREEN_W))
         south_border = ((0, SCREEN_W), (0, 0))
         west_border = ((0, 0), (SCREEN_H, 0))
-        return north_border, east_border, south_border, west_border,
+        return north_border, east_border, south_border, west_border
+
+    @staticmethod
+    def get_border_corners():
+        return (SCREEN_H, 0), (SCREEN_H, SCREEN_W), (0, SCREEN_W), (0, 0)
 
     def obstacles_to_walls(self):
         """
@@ -308,7 +304,6 @@ class Light:
                     segment.append(obstacle[0])
                 wall = tuple(segment)
                 walls.append(wall)
-
         return tuple(walls)
 
     def find_corners(self):
@@ -316,7 +311,6 @@ class Light:
         corners = []
 
         for wall in walls:
-            print(wall)
             for vertex in wall:
                 if vertex not in corners:
                     corners.append(vertex)
@@ -333,6 +327,9 @@ class Light:
         a list of segment. Each frame list is updated accordingly to the
         position of the Light
         """
+        def filter_rays(r):
+            return max_angle > calculate_angle(origin, r[1]) > min_angle
+
         origin = (self.x, self.y)  # point from which we will shot rays
 
         corners = self.corners[::]
@@ -344,29 +341,35 @@ class Light:
         # sorting walls according to their distance to origin allows for
         # faster finding rays intersections and avoiding iterating through
         # whole list of the walls:
-        walls.sort(
-            key=lambda w: distance_2d(origin, w[0]) + distance_2d(origin,
-                                                                  w[1]))
+        walls.sort(key=lambda w: distance(origin, w[0]) + distance(origin, w[1]))
         self.closest_wall = walls[0]
 
-        rays = self.cast_rays_to_corners(origin, corners, walls)
-        print(f"Number of rays: {len(rays)}")
+        rays = self.cast_rays_to_corners(origin, corners)
+        # print(f"Number of rays: {len(rays)}")
 
         corners_open_walls = self.corners_open_walls
         corners_close_walls = self.corners_close_walls
         colliding = set()  # rays which intersects any wall
         offset_rays = []
 
-        for ray in rays:
-            ending = ray[1]
-            if ending in corners:  # check if it is ray shot at obstacle corner
-                ray_opens = corners_open_walls[ending]
-                ray_closes = corners_close_walls[ending]
-                both_walls = {ray_opens, ray_closes}
-            else:
-                both_walls = None
+        for wall in walls:
+            min_angle = calculate_angle(origin, wall[0])
+            max_angle = calculate_angle(origin, wall[1])
 
-            for wall in walls:
+            # TODO: replace rays with filter()  below when issue #2 is fixed
+            # filter(lambda r: max_angle > calculate_angle(origin, r[1]) > min_angle, rays)
+            for ray in filter(lambda r: max_angle > calculate_angle(origin, r[1]) > min_angle, rays):
+                if ray in colliding:
+                    continue
+                ending = ray[1]
+                # check if it is ray shot at obstacle corner:
+                if ending in corners:
+                    ray_opens = corners_open_walls[ending]
+                    ray_closes = corners_close_walls[ending]
+                    both_walls = {ray_opens, ray_closes}
+                else:
+                    both_walls = None
+
                 if intersects(ray, wall) or intersects(wall, ray):
                     if both_walls is None:  # additional around-corner ray
                         colliding.add(ray)
@@ -374,41 +377,92 @@ class Light:
                         offset_rays.append((origin, new_ray_end))
                     elif wall not in both_walls:
                         colliding.add(ray)
-                    break
+                    continue
+
+        # for i, ray in enumerate(rays):
+        #     ending = ray[1]
+        #     if ending in corners:  # check if it is ray shot at obstacle corner
+        #         ray_opens = corners_open_walls[ending]
+        #         ray_closes = corners_close_walls[ending]
+        #         both_walls = {ray_opens, ray_closes}
+        #     else:
+        #         both_walls = None
+        #
+        #     for wall in walls:
+        #         if intersects(ray, wall) or intersects(wall, ray):
+        #             if both_walls is None:  # additional around-corner ray
+        #                 colliding.add(ray)
+        #                 new_ray_end = get_intersection(*ray, *wall)
+        #                 offset_rays.append((origin, new_ray_end))
+        #             elif wall not in both_walls:
+        #                 colliding.add(ray)
+        #             break
 
         rays = [r for r in rays if r not in colliding] + offset_rays
         # need to sort rays by their ending angle agin because offset_rays
         # unsorted and pushed at the end of the list:
         rays.sort(key=lambda r: calculate_angle(origin, r[1]))
         self.rays = rays
-        print(f"Number of rays: {len(self.rays)}")
+        # print(f"Number of rays: {len(self.rays)}")
 
         # finally, we build a visibility polygon using endpoint of each ray:
         self.light_polygon = [r[1] for r in rays]
 
-    def cast_rays_to_corners(self, origin, corners, walls):
+    def cast_rays_to_corners(self, origin, corners):
         """
         Create a 'ray' connecting origin with each corner (obstacle vertex) on
         the screen. Ray is a tuple of two (x, y) coordinates used later to
         find which segment obstructs visibility.
-        TODO: find way to emit less offset rays [ ][ ]
+        TODO: find way to emit less offset rays [x][ ]
         :param walls: list
         :param origin: tuple
         :param corners: list
         :return: list
         """
         rays = []
-        border_walls = self.border_walls
-        # walls = [w for w in walls if w not in border_walls]
+        border_corners = self.border_corners
         corners_open_walls = self.corners_open_walls
         corners_close_walls = self.corners_close_walls
 
-        for corner in corners:
+        opened, max_angle, quadrant_ = None, 360, None
+        for i, corner in enumerate(corners):
             angle = calculate_angle(origin, corner)
+            begins = corners_open_walls[corner]
+            ends = corners_close_walls[corner]
+
+            # this code reduces amount of rays shot at corners to save some
+            # processing time:
+            if corner not in border_corners:
+                if (opened is None
+                        or opened in (begins, ends)
+                        or not ccw((opened[0], opened[1], corner))):
+                    pass
+                else:
+                    # TODO: make it more efficient [x][ ] important issue #2
+                    #  when vertex closing current wall is in LL quadrant
+                    #  and checked-against corners are in LR quadrant (their
+                    #  angle is not less than max_angle because we 'reset'
+                    #  angle at 260 degrees) or vertex opening current wall
+                    #  is in LR quadrant and corner is in LL quadrant (its
+                    #  angle is larger than in_angle (see update_light_polygon
+                    #  method) in filter builtin, ray is shot which should
+                    #  not be! (temporary fix: replace filter() wit raw rays
+                    #  list (slow!)
+                    if angle < max_angle:
+                        continue
+
+                if ccw((origin, corner, begins[1])):
+                    opened = ends
+                else:
+                    opened = begins
+                max_angle = calculate_angle(origin, opened[1])
+                # quadrant_ = quadrant(opened[1], origin)
+                # angle_b = calculate_angle(origin, opened[1])
+                # max_angle = max((angle, angle_b))
+                # min_angle = min((angle_a, angle_b))
+
             ray = (origin, corner)
             new_rays = [ray]
-            begins, ends = corners_open_walls[corner], corners_close_walls[
-                corner]
 
             # additional rays to search behind the corners:
             end_a = move_along_vector(origin, 1500, angle=-angle + SIGMA)
