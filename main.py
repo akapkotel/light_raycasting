@@ -4,10 +4,14 @@ See README.md file.
 """
 import time
 import random
-from functools import wraps
 
 import pygame
 import pygame.freetype
+
+from functools import wraps
+
+from options_screen import Interactable, WHITE, BLACK, GREY, GREEN
+
 
 # debug variables:
 TIMER = True
@@ -38,21 +42,21 @@ SCREEN_W = 1000
 SCREEN_H = 1000
 TITLE = "Visibility algorithm demo"
 RED = (255, 0, 0)
-GREEN = (0, 255, 0)
 SUN = (100, 150, 100)
-WHITE = (255, 255, 255)
 DARK = (32, 32, 32)
 LIGHT = (192, 192, 192)
-GREY = (127, 127, 127)
-BLACK = (0, 0, 0)
 SHADOW = (240, 240, 240)
 
 get_time = time.perf_counter
 draw = pygame.draw
+draw_line = draw.line
+draw_circle = draw.circle
+draw_polygon = draw.polygon
 draw_text = FONT.render_to
 
 
 gfps = []
+run_simulation = False
 
 
 def timer(func):
@@ -81,111 +85,63 @@ def timer(func):
     return wrapper
 
 
-def new_id(class_):
-    """
-    Assign new id to the newly instantiated object.
+def main_loop():
+    global run_simulation
+    bind_light_to_cursor = True
+    obstacles = create_obstacles()
+    lights = create_lights(obstacles)
+    interactables = create_interactable_options()
+    pointed = None
 
-    :param class_: class -- any class which has count class attribute
-    :return: int -- new id value
-    """
-    try:
-        class_.count += 1
-        return class_.count
-    except ValueError:
-        raise AttributeError("Object passed has no class attribute: 'count'!")
+    while not run_simulation:
+        redraw_configuration_screen(interactables)
+        for event in pygame.event.get():
+            event_type = event.type
+            if event_type == pygame.MOUSEMOTION:
+                pointed = if_mouse_over_interactable(*event.pos, interactables)
+            elif event_type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # mouse left button
+                    if pointed is not None:
+                        pointed.on_click()
+            elif event_type == pygame.QUIT:
+                pygame.quit()
 
-
-# @timer
-def redraw_screen(lights, obstacles):
-    window.fill(DARK)
-    draw_obstacles(obstacles)
-    draw_light(lights)
-    draw_fps_counter()
-    pygame.display.update()
-
-
-def draw_fps_counter():
-    if gfps:
-        value = sum(gfps) // len(gfps)
-        color = GREEN if value > 24 else RED
-        text = "FPS: " + str(value)
-        draw_text(window, (SCREEN_W // 2, SCREEN_H // 20), text, color)
-
-
-def draw_intersection(intersector, second_segemnt):
-    color = RED if intersects(intersector, second_segemnt) else WHITE
-    draw.line(window, color, *intersector)
-    draw.line(window, color, *second_segemnt)
-
-
-def draw_obstacles(obstacles):
-    for obstacle in obstacles:
-        draw.polygon(window, BLACK, obstacle)
+    while run_simulation:
+        redraw_screen(lights, obstacles)  # draw previous frame
+        if bind_light_to_cursor:
+            update_lights(lights)
+        for event in pygame.event.get():
+            event_type = event.type
+            if event_type == pygame.MOUSEMOTION and bind_light_to_cursor:
+                on_mouse_motion(*event.pos, lights)
+            elif event_type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # mouse left button
+                    bind_light_to_cursor = drag_or_drop(bind_light_to_cursor)
+                    on_mouse_motion(*event.pos, lights)
+            elif event_type == pygame.QUIT:
+                run_simulation = False
+                pygame.quit()
 
 
-# @timer
-def draw_light(lights):
-    for light in lights:
-        if CLOSEST_WALL and light.closest_wall is not None:
-            pos = (int(light.closest_wall[0][0]), int(light.closest_wall[0][1]))
-            draw.circle(window, GREEN, pos, 10)
-            pos = (int(light.closest_wall[1][0]), int(light.closest_wall[1][1]))
-            draw.circle(window, RED, pos, 10)
-
-        if len(light.light_polygon) > 2:
-            draw.polygon(window, light.color, light.light_polygon)
-
-        # if light.active_walls:
-        #     for w in light.active_walls:
-        #         draw.line(window, RED, *w)
-
-        if SHOW_RAYS:
-            for r in light.rays:
-                color = RED if light.rays.index(r) == 0 else WHITE
-                draw.line(window, color, (r[0][0], r[0][1]), (r[1][0], r[1][1]))
-
-    for light in lights:
-        pygame.draw.circle(window, light.color, (light.x, light.y), 5)
-
-
-def new_obstacle(i, j):
-    """Produce obstacle (polygon) of any size and number of vertices."""
-    obstacle = []
-    for k in range(OBSTACLE_EDGES):
-        angle = (k - 1) * (360 // OBSTACLE_EDGES)
-        offset = 180 // OBSTACLE_EDGES
-        point = move_along_vector((i, j), OBSTACLE_EDGE_SIZE, angle=angle-offset)
-        obstacle.append(point)
-    return obstacle
-
-
-def create_obstacles():
+def create_obstacles(vertices=OBSTACLE_EDGES):
     obstacles, bounding_boxes = [], []
     size = OBSTACLE_EDGE_SIZE
     for i in range(size*2, SCREEN_W, size*3):
         for j in range(size*2, SCREEN_H, size*3):
-            obstacle = new_obstacle(i, j)
+            obstacle = new_obstacle(i, j, vertices)
             obstacles.append(obstacle)
     return obstacles
 
 
-def create_lights(obstacles):
-    lights = []
-    x, y = SCREEN_W // 2, SCREEN_H // 2
-    randint = random.randint
-    for i in range(LIGHTS_COUNT):
-        if RANDOM_COLORS:
-            color = (randint(0, 255), randint(0, 255), randint(0, 255))
-        else:
-            color = LIGHT
-        if i == 0:
-            point = (x, y)
-        else:
-            angle = (i) * (360 // LIGHTS_COUNT)
-            point = move_along_vector((x, y), 10, angle=angle)
-        light = Light(int(point[0]), int(point[1]), color, obstacles)
-        lights.append(light)
-    return lights
+def new_obstacle(i, j, vertices):
+    """Produce obstacle (polygon) of any size and number of vertices."""
+    obstacle = []
+    for k in range(vertices):
+        angle = (k - 1) * (360 // vertices)
+        offset = 180 // vertices
+        point = move_along_vector((i, j), OBSTACLE_EDGE_SIZE, angle=angle-offset)
+        obstacle.append(point)
+    return obstacle
 
 
 @timer
@@ -194,39 +150,130 @@ def update_lights(lights):
         light.update_visible_polygon()
 
 
-def main_loop():
-    run, drag_light = True, True
-    obstacles = create_obstacles()
-    lights = create_lights(obstacles)
+def create_lights(obstacles):
+    lights = []
+    x, y = SCREEN_W // 2, SCREEN_H // 2
+    for i in range(LIGHTS_COUNT):
+        color = get_light_color()
+        point = get_light_position(i, x, y)
+        # noinspection PyTypeChecker
+        light = Light(*point, color, obstacles)
+        lights.append(light)
+    return lights
 
-    while run:
-        redraw_screen(lights, obstacles)  # draw previous frame
-        if drag_light:
-            update_lights(lights)
-        for event in pygame.event.get():
-            event_type = event.type
-            if event_type == pygame.MOUSEMOTION:
-                if drag_light:
-                    on_mouse_motion(*event.pos, lights)
-            elif event_type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    drag_light = drag_or_drop(drag_light)
-                    on_mouse_motion(*event.pos, lights)
-                if event.button == 3:
-                    print("Right mouse button!")
-            elif event_type == pygame.QUIT:
-                run = False
-                pygame.quit()
+
+def get_light_color():
+    if RANDOM_COLORS:
+        randint = random.randint
+        return randint(0, 255), randint(0, 255), randint(0, 255)
+    else:
+        return LIGHT
+
+
+def get_light_position(i, x, y):
+    if not i:
+        point = (x, y)
+    else:
+        angle = i * (360 // LIGHTS_COUNT)
+        point = move_along_vector((x, y), 10, angle=angle)
+    return point
+
+
+def create_interactable_options():
+    interactables = []
+    p = (SCREEN_H / 2, SCREEN_W / 2)  # basic position to override
+    positions = [(p[0] + 300, p[1])]
+    functions = [run_application]
+    names = ["Run", "+", "-"]
+    for i, position in enumerate(positions):
+        # noinspection PyTypeChecker
+        b = Interactable(window, *position, 25, 25, names[i], functions[i])
+        interactables.append(b)
+    return interactables
+
+
+def run_application():
+    global run_simulation
+    run_simulation = True
+
+
+def redraw_configuration_screen(interactables: list):
+    for interactable in interactables:
+        interactable.draw()
+    pygame.display.update()
+
+
+def if_mouse_over_interactable(x, y, interactables: list):
+    pointed = None
+    for interactable in interactables:
+        if interactable.mouse_over(x, y):
+            interactable.active = True
+            return interactable
+    else:
+        for interactable in interactables:
+            interactable.active = False
+    return pointed
+
+
+# @timer
+def redraw_screen(lights, obstacles):
+    window.fill(DARK)
+    draw_obstacles(obstacles)
+    draw_light(lights)
+    if gfps:
+        draw_fps_counter()
+    pygame.display.update()
+
+
+def draw_fps_counter():
+    value = sum(gfps) // len(gfps)
+    color = GREEN if value > 24 else RED
+    text = "FPS: " + str(value)
+    draw_text(window, (SCREEN_W // 2, SCREEN_H // 20), text, color)
+
+
+def draw_intersection(intersector, second_segemnt):
+    color = RED if intersects(intersector, second_segemnt) else WHITE
+    draw_line(window, color, *intersector)
+    draw_line(window, color, *second_segemnt)
+
+
+def draw_obstacles(obstacles):
+    for obstacle in obstacles:
+        draw_polygon(window, BLACK, obstacle)
+
+
+# @timer
+def draw_light(lights):
+    for light in lights:
+        closest_wall = light.closest_wall
+        if CLOSEST_WALL and closest_wall is not None:
+            pos = (int(closest_wall[0][0]), int(closest_wall[0][1]))
+            draw_circle(window, GREEN, pos, 5)
+            pos = (int(closest_wall[1][0]), int(closest_wall[1][1]))
+            draw_circle(window, RED, pos, 5)
+
+        if len(light.light_polygon) > 2:
+            draw_polygon(window, light.color, light.light_polygon)
+
+        x, y = light.origin
+        polygon = light.light_polygon
+        if SHOW_RAYS:
+            for i, r in enumerate(polygon):
+                color = WHITE if i else RED
+                draw_line(window, color, (x, y), (r[0], r[1]))
+
+        draw_circle(window, light.color, (int(x), int(y)), 5)
 
 
 def on_mouse_motion(x, y, lights):
-    for i, light in enumerate(lights):
-        if i == 0:
-            light.move_to(x, y)
-        else:
-            angle = (i) * (360 // LIGHTS_COUNT)
-            point = move_along_vector((x, y), 15, angle=angle)
-            light.move_to(int(point[0]), int(point[1]))
+    lights[0].move_to(x, y)
+    if len(lights) > 1:
+        for i, light in enumerate(lights):
+            if i:
+                angle = i * (360 // LIGHTS_COUNT)
+                point = move_along_vector((int(x), int(y)), 15, angle=angle)
+                light.move_to(point[0], point[1])
 
 
 def drag_or_drop(drag_light):
