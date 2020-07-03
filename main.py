@@ -25,7 +25,7 @@ CLOSEST_WALL = True
 LIGHTS_COUNT = 1
 # type of polygon is determined by the number of edges: 3 = triangle,
 # 4 = square, 5 = pentagon, 6 = hexagon etc.
-OBSTACLE_EDGES = 4
+OBSTACLE_EDGES = 8
 # size of obstacles and distance between them is determined by this variable
 # (smaller the size, more obstacles would be drawn!):
 OBSTACLE_EDGE_SIZE = 100
