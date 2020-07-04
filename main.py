@@ -10,7 +10,8 @@ import pygame.freetype
 
 from functools import wraps
 
-from options_screen import Interactable, WHITE, BLACK, GREY, GREEN
+from options_screen import Button, ClampedValue, WHITE, BLACK, GREY, \
+    GREEN
 
 
 # debug variables:
@@ -56,6 +57,7 @@ draw_text = FONT.render_to
 
 
 gfps = []
+interactables = []
 run_simulation = False
 
 
@@ -87,10 +89,7 @@ def timer(func):
 
 def main_loop():
     global run_simulation
-    bind_light_to_cursor = True
-    obstacles = create_obstacles()
-    lights = create_lights(obstacles)
-    interactables = create_interactable_options()
+    create_interactable_options()
     pointed = None
 
     while not run_simulation:
@@ -106,6 +105,9 @@ def main_loop():
             elif event_type == pygame.QUIT:
                 pygame.quit()
 
+    bind_light_to_cursor = True
+    obstacles = create_obstacles()
+    lights = create_lights(obstacles)
     while run_simulation:
         redraw_screen(lights, obstacles)  # draw previous frame
         if bind_light_to_cursor:
@@ -128,18 +130,20 @@ def create_obstacles(vertices=OBSTACLE_EDGES):
     size = OBSTACLE_EDGE_SIZE
     for i in range(size*2, SCREEN_W, size*3):
         for j in range(size*2, SCREEN_H, size*3):
-            obstacle = new_obstacle(i, j, vertices)
+            obstacle = new_obstacle(i, j)
             obstacles.append(obstacle)
     return obstacles
 
 
-def new_obstacle(i, j, vertices):
+def new_obstacle(i, j):
     """Produce obstacle (polygon) of any size and number of vertices."""
     obstacle = []
-    for k in range(vertices):
-        angle = (k - 1) * (360 // vertices)
-        offset = 180 // vertices
-        point = move_along_vector((i, j), OBSTACLE_EDGE_SIZE, angle=angle-offset)
+    size = OBSTACLE_EDGE_SIZE
+    edges = OBSTACLE_EDGES
+    for k in range(edges):
+        angle = (k - 1) * (360 // edges)
+        offset = 180 // edges
+        point = move_along_vector((i, j), size, angle=angle-offset)
         obstacle.append(point)
     return obstacle
 
@@ -180,16 +184,24 @@ def get_light_position(i, x, y):
 
 
 def create_interactable_options():
-    interactables = []
+    global interactables
     p = (SCREEN_H / 2, SCREEN_W / 2)  # basic position to override
-    positions = [(p[0] + 300, p[1])]
-    functions = [run_application]
-    names = ["Run", "+", "-"]
+    positions = [(p[0] + 300, p[1]), (p[0], p[1] - 100), (p[0], p[1] - 200)]
+    types = [Button, ClampedValue, ClampedValue]
+    functions = [run_application, change_edges_count, change_edge_size]
+    ranges = [None, (3, 20, 1), (25, 200, 25)]
+    values = ["Run", 5, 100]
+    labels = [None, "Edges:", "Size:"]
     for i, position in enumerate(positions):
-        # noinspection PyTypeChecker
-        b = Interactable(window, *position, 25, 25, names[i], functions[i])
+        if types[i] == ClampedValue:
+            min, max, step = ranges[i]
+            # noinspection PyTypeChecker
+            b = types[i](window, *position, 25, 25, values[i], min, max,
+                         step, functions[i], labels[i])
+        else:
+            # noinspection PyTypeChecker
+            b = types[i](window, *position, 25, 25, values[i], functions[i])
         interactables.append(b)
-    return interactables
 
 
 def run_application():
@@ -197,7 +209,26 @@ def run_application():
     run_simulation = True
 
 
+def change_edges_count():
+    global interactables, OBSTACLE_EDGES
+    OBSTACLE_EDGES = interactables[1].value
+
+
+def change_edge_size():
+    global OBSTACLE_EDGE_SIZE
+    OBSTACLE_EDGE_SIZE = interactables[2].value
+
+
 def redraw_configuration_screen(interactables: list):
+    """
+    Draw configuration screen, where user can set-up key variables of the
+    simulation.
+    """
+    window.fill(DARK)
+    # visual representation of obstacle shape:
+    poly = new_obstacle(SCREEN_W // 2, SCREEN_H - 300)
+    draw_polygon(window, WHITE, poly)
+
     for interactable in interactables:
         interactable.draw()
     pygame.display.update()

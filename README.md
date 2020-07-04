@@ -14,17 +14,17 @@ Installation, running and use instructions:
 2. Setup new virtual environment with Python 3.6.
 3. Install requirements with pip install -r requirements.txt
 4. Run main.py in any IDE, e.g. PyCharm, or in Terminal.
-5. In main.py in section "#debug variables" you can change value of TIMER boolean to False if you want disable measuring execution time (default is True), and SHOW_RAYS to True if you want see how many raycasts are drawn each frame (default is False).
-6. Size and shape of obstacles could be modified by changing OBSTACLE_EDGES variable value: 3 makes triangles, 4 squares, 5 pentagons etc. Variable OBSTACLE_EDGE_SIZE controlls not only size of obstacles, but also distances between them.
-
-For exampole. if you set edges to 3, and size to 150 you will get 4 triangles:
-![Triangles](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_3.png)
+5. First, you will see configuration screen with some variables.
+![Menu](https://github.com/akapkotel/light_raycasting/blob/master/configuration_menu.png)
+You can change them to set-up your simulation specifications. You can change size and shape of obstacles. For exampole. if you set edges to 3, and size to 150 you will get 4 triangles:
+ ![Triangles](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_3.png)
 
 Setting edges to 6 and size to 50 would produce:
 ![Hexagons](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_2.png)
 
-7. You can change LIGHTS_COUNT variable to add additional sources of light/FOV shadows effect (although I did not implement alpha transparency so rathar than shadows, you have sharp color-change). Beware of lights number, since it is computation-heavy.
-8. You can randomize colors of each light to better see that there are many, distinct FOV polygons drawn. Set RANDOM_COLORS to True to get random colors, otherwise a visibility/light polygon would by rgb(192, 192, 192).
+6. Then click "Run" button, and the simulation would begin. You can move "light" source on the screen using your mouse. Left-click allows you to left the light at the current position. Another left-click would pick it up.
+
+
 
 With random lights colors and 8 lights:
 ![Random colors](https://github.com/akapkotel/light_raycasting/blob/master/random_colors_2.png)
@@ -46,6 +46,8 @@ To be done:
 2. Add option to move position of obstacles when app is running.
 3. Replacing single-colored "lit" polygon with gradient to simulate diminishing power of light. It could force me to replace arcade library with something else, since arcade does not allow draw gradient-polygons in real-time.
 4. Adding this project to my Django blog (when it is also finished).
+5. You can change LIGHTS_COUNT variable to add additional sources of light/FOV shadows effect (although I did not implement alpha transparency so rathar than shadows, you have sharp color-change). Beware of lights number, since it is computation-heavy.
+6. You can randomize colors of each light to better see that there are many, distinct FOV polygons drawn. Set RANDOM_COLORS to True to get random colors, otherwise a visibility/light polygon would by rgb(192, 192, 192).
 
 If anyone has ideas how to make this algorithm better (faster), please, notice me, fork and make pull-requests.
 
@@ -53,7 +55,8 @@ Changelog:
 
 1. Added FPS-counter drawn on the screen for user convenience.
 2. Added option to randmize light/visibility polygons colors.
-
+3. Added configuration screen to application. No longer need to change variables in python script.
+4. 
 ----
 
 Rafał "Akapkotel" Trąbski
