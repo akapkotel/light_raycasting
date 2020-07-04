@@ -10,6 +10,7 @@ import pygame.freetype
 
 from functools import wraps
 
+
 from options_screen import Button, ClampedValue, WHITE, BLACK, GREY, \
     GREEN
 
@@ -73,7 +74,7 @@ def timer(func):
         end_time = get_time()
         total_time = end_time - start_time
 
-        fps = 1 // total_time\
+        fps = 1 // total_time
 
         if func.__name__ == "update_lights":
             global gfps

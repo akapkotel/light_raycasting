@@ -204,12 +204,14 @@ class Light:
         self.walls = self.border_walls + self.obstacles_to_walls()
         self.walls_centers = self.calculate_walls_centers()
         self.closest_wall = None
+
         # we need obstacle's corners to emit rays from origin to them:
         self.corners_open_walls = {}
         self.corners_close_walls = {}
         self.corners = self.find_corners()
         self.border_corners = self.get_border_corners()
 
+        # this would be used to draw our visible/lit-up area:
         self.light_polygon = []
 
     def move_to(self, x, y):
@@ -287,14 +289,13 @@ class Light:
         """
         origin = self.origin  # point from which we will shot rays
         corners = self.corners[::]
+        corners.sort(key=lambda c: calculate_angle(origin, c))
         walls = self.sort_walls(origin)
-        rays = self.cast_rays_to_corners(origin, corners)
-        rays = self.test_rays_against_walls(corners, origin, rays, walls)
+        rays = self.create_rays_for_corners(origin, corners)
+        rays = self.collide_rays_w_walls(corners, origin, rays, walls)
         # need to sort rays by their ending angle again because offset_rays
         # are unsorted and pushed at the end of the list:
         rays.sort(key=lambda r: calculate_angle(origin, r[1]))
-        self.rays = rays
-
         # finally, we build a visibility polygon using endpoint of each ray:
         self.light_polygon = [r[1] for r in rays]
 
@@ -318,7 +319,17 @@ class Light:
         self.closest_wall = walls[0]
         return walls
 
-    def test_rays_against_walls(self, corners, origin, rays, walls):
+    def collide_rays_w_walls(self, corners: list, origin: tuple, rays: list, walls: list):
+        """
+        Test for intersections of each ray and each wall of each obstacle to
+        build final polygon representing our visible/lit-up area.
+
+        :param corners: list -- vertices of all obstacles
+        :param origin: tuple -- (x, y) position of light/observer
+        :param rays: list -- all rays emitted from origin to corners
+        :param walls: list -- all walls which can block vision/light
+        :return: list -- clockwise-ordered points of visibility polygon
+        """
         colliding = set()  # rays which intersects any wall
         offset_rays = []
         corners_open_walls = self.corners_open_walls
@@ -360,28 +371,25 @@ class Light:
         first_step = filter(lambda r: ccw((origin, wall[1], r[1])), rays)
         return filter(lambda r: not ccw((origin, wall[0], r[1])), first_step)
 
-    def cast_rays_to_corners(self, origin: tuple, corners: list) -> list:
+    def create_rays_for_corners(self, origin: tuple, corners: list) -> list:
         """
         Create a 'ray' connecting origin with each corner (obstacle vertex) on
         the screen. Ray is a tuple of two (x, y) coordinates used later to
         find which segment obstructs visibility.
-        TODO: find better way to do the job of cast_rays_to_corners()
         TODO: find way to emit less offset rays [x][ ]
         :param origin: tuple -- point from which 'light' is emitted
         :param corners: list -- vertices of obstacles
         :return: list -- rays to be tested against obstacles edges
         """
-        sorted_corners = sorted(corners, key=lambda c: calculate_angle(origin, c))
         corners_open_walls = self.corners_open_walls
         corners_close_walls = self.corners_close_walls
-
-        min_angle, max_angle, max_distance = 0, 0, 10000
         border = self.border_corners
 
         rays = []
-        angles = [calculate_angle(origin, corner) for corner in sorted_corners]
-        distances = [distance(origin, corner) for corner in sorted_corners]
-        for i, corner in enumerate(sorted_corners):
+        angles = [calculate_angle(origin, corner) for corner in corners]
+        distances = [distance(origin, corner) for corner in corners]
+        min_angle, max_angle, max_distance = 0, 0, 10000
+        for i, corner in enumerate(corners):
             angle = angles[i]
             corner_distance = distances[i]
 
