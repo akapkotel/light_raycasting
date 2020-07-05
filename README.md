@@ -15,6 +15,7 @@ Installation, running and use instructions:
 3. Install requirements with pip install -r requirements.txt
 4. Run main.py in any IDE, e.g. PyCharm, or in Terminal.
 5. First, you will see configuration screen with some variables.
+6. You can profile the code using cProfile moule, by setting variable PROFILLING to True.
 ![Menu](https://github.com/akapkotel/light_raycasting/blob/master/configuration_menu.png)
 You can change them to set-up your simulation specifications. You can change size and shape of obstacles. For exampole. if you set edges to 3, and size to 150 you will get 4 triangles:
  ![Triangles](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_3.png)
@@ -22,7 +23,7 @@ You can change them to set-up your simulation specifications. You can change siz
 Setting edges to 6 and size to 50 would produce:
 ![Hexagons](https://github.com/akapkotel/light_raycasting/blob/master/visibility_algorithm_demo_2.png)
 
-6. Then click "Run" button, and the simulation would begin. You can move "light" source on the screen using your mouse. Left-click allows you to left the light at the current position. Another left-click would pick it up.
+7. Then click "Run" button, and the simulation would begin. You can move "light" source on the screen using your mouse. Left-click allows you to left the light at the current position. Another left-click would pick it up.
 
 
 
@@ -50,13 +51,6 @@ To be done:
 6. You can randomize colors of each light to better see that there are many, distinct FOV polygons drawn. Set RANDOM_COLORS to True to get random colors, otherwise a visibility/light polygon would by rgb(192, 192, 192).
 
 If anyone has ideas how to make this algorithm better (faster), please, notice me, fork and make pull-requests.
-
-Changelog:
-
-1. Added FPS-counter drawn on the screen for user convenience.
-2. Added option to randmize light/visibility polygons colors.
-3. Added configuration screen to application. No longer need to change variables in python script.
-4. 
 ----
 
 Rafał "Akapkotel" Trąbski

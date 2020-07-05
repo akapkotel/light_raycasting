@@ -1,27 +1,24 @@
 #!/usr/bin/env python
 """
 See README.md file.
+TODO: use typing module
 """
-import time
+import cProfile
+import pstats
 import random
+import time
+from functools import wraps
 
 import pygame
 import pygame.freetype
 
-from functools import wraps
-
-
-from options_screen import Button, ClampedValue, WHITE, BLACK, GREY, \
-    GREEN
-
+from options_screen import (BLACK, Button, CheckButton, ClampedValue, GREEN,
+    WHITE)
 
 # debug variables:
 TIMER = True
 # to draw rays from origin to eah obstacle-corner:
 SHOW_RAYS = True
-# to highlight vertices of edge closest to the origin, green vertex is first
-# and red is second:
-CLOSEST_WALL = True
 # number of origins from where FOV/light polygon will be drawn. Raising this
 # variable will get very costly fast!
 LIGHTS_COUNT = 1
@@ -35,6 +32,8 @@ OBSTACLE_EDGE_SIZE = 100
 # will need this to actually see that there are more than 1 light polygons
 # drawn):
 RANDOM_COLORS = False
+# to profile simulation on your machine, set this to True:
+PROFILE = False
 
 
 # constants:
@@ -184,24 +183,29 @@ def get_light_position(i, x, y):
     return point
 
 
+# noinspection PyTypeChecker
 def create_interactable_options():
     global interactables
     p = (SCREEN_H / 2, SCREEN_W / 2)  # basic position to override
-    positions = [(p[0] + 300, p[1]), (p[0], p[1] - 100), (p[0], p[1] - 200)]
-    types = [Button, ClampedValue, ClampedValue]
-    functions = [run_application, change_edges_count, change_edge_size]
-    ranges = [None, (3, 20, 1), (25, 200, 25)]
-    values = ["Run", 5, 100]
-    labels = [None, "Edges:", "Size:"]
+    positions = [(p[0] + 300, p[1]), (p[0], p[1] - 100), (p[0], p[1] - 200),
+                 (p[0], p[1] - 300), (p[0], p[1] - 400)]
+    types = [Button, ClampedValue, ClampedValue, CheckButton, CheckButton]
+    functions = [run_application, change_edges_count, change_edge_size,
+        toggle_rays, toggle_colors]
+    ranges = [None, (3, 20, 1), (25, 200, 25), None, None]
+    values = ["Run", 5, 100, SHOW_RAYS, RANDOM_COLORS]
+    labels = [None, "Edges:", "Size:", "Show rays?", "Random colors?"]
+
     for i, position in enumerate(positions):
         if types[i] == ClampedValue:
             min, max, step = ranges[i]
-            # noinspection PyTypeChecker
-            b = types[i](window, *position, 25, 25, values[i], min, max,
+            b = ClampedValue(window, *position, 25, 25, values[i], min, max,
                          step, functions[i], labels[i])
+        elif types[i] == CheckButton:
+            b = CheckButton(window, *position, 15, 15, values[i], functions[i],
+                            labels[i])
         else:
-            # noinspection PyTypeChecker
-            b = types[i](window, *position, 25, 25, values[i], functions[i])
+            b = Button(window, *position, 25, 25, values[i], functions[i])
         interactables.append(b)
 
 
@@ -218,6 +222,17 @@ def change_edges_count():
 def change_edge_size():
     global OBSTACLE_EDGE_SIZE
     OBSTACLE_EDGE_SIZE = interactables[2].value
+
+
+def toggle_rays():
+    global SHOW_RAYS
+    SHOW_RAYS = interactables[3].value
+    print(SHOW_RAYS)
+
+
+def toggle_colors():
+    global RANDOM_COLORS
+    RANDOM_COLORS = interactables[4].value
 
 
 def redraw_configuration_screen(interactables: list):
@@ -278,24 +293,15 @@ def draw_obstacles(obstacles):
 # @timer
 def draw_light(lights):
     for light in lights:
-        closest_wall = light.closest_wall
-        if CLOSEST_WALL and closest_wall is not None:
-            pos = (int(closest_wall[0][0]), int(closest_wall[0][1]))
-            draw_circle(window, GREEN, pos, 5)
-            pos = (int(closest_wall[1][0]), int(closest_wall[1][1]))
-            draw_circle(window, RED, pos, 5)
-
         if len(light.light_polygon) > 2:
             draw_polygon(window, light.color, light.light_polygon)
-
         x, y = light.origin
         polygon = light.light_polygon
         if SHOW_RAYS:
             for i, r in enumerate(polygon):
                 color = WHITE if i else RED
                 draw_line(window, color, (x, y), (r[0], r[1]))
-
-        draw_circle(window, light.color, (int(x), int(y)), 5)
+        draw_circle(window, BLACK, (int(x), int(y)), 5)
 
 
 def on_mouse_motion(x, y, lights):
@@ -318,4 +324,13 @@ if __name__ == "__main__":
 
     window = pygame.display.set_mode((SCREEN_W, SCREEN_H))
     pygame.display.set_caption(TITLE)
+
+    if PROFILE:
+        profiler = cProfile.Profile()
+        profiler.enable()
     main_loop()
+    if PROFILE:
+        # noinspection PyUnboundLocalVariable
+        profiler.disable()
+        stats = pstats.Stats(profiler).sort_stats("cumtime")
+        stats.print_stats(20)

@@ -61,7 +61,7 @@ class ClampedValue(Button):
     def __init__(self, window, x: float, y: float, h: float, w: float,
                  value: int, min: int = 0, max: int = math.inf, step: int = 1,
                  function: callable = None, label: str = "ClampedValue"):
-        super().__init__(window, x, y, h, w, function)
+        super().__init__(window, x, y, h, w, function=function)
         self.value = value
         self.min = min
         self.max = max
@@ -69,17 +69,18 @@ class ClampedValue(Button):
         self.window = window
         self.points = self.create_points_lists(x, y, h, w)
         self.active_button = None
-        self.function = function
         self.label = label
 
     @staticmethod
     def create_points_lists(x, y, h, w):
-        # main body:
+        # counter:
         ww, www = 2 * w, 3 * w
         switch = [(x - w, y - h), (x + w, y - h), (x + w, y + h),
             (x - w, y + h)]
+        # increment button:
         plus_btn = [(x + w, y - h), (x + ww, y - h), (x + www, y),
             (x + ww, y + h), (x + w, y + h)]
+        # decrement button:
         min_btn = [(x - w, y - h), (x - w, y + h), (x - ww, y + h),
             (x - www, y), (x - ww, y - h), ]
         return [switch, plus_btn, min_btn]
@@ -92,18 +93,21 @@ class ClampedValue(Button):
             else:
                 color = WHITE
             draw.polygon(self.window, color, element)
+        x, y, h, w = self.x, self.y, self.h, self.w
         # value:
-        draw_text(self.window, (self.x - 5, self.y - 5), str(self.value),
-                  BLACK)
+        draw_text(self.window, (x - 5, y - 5), str(self.value), BLACK)
         # + and -
-        draw_text(self.window, (self.x + 1.6 * self.w, self.y - 5), "+", BLACK)
-        draw_text(self.window, (self.x - 2 * self.w, self.y), "-", BLACK)
+        draw_text(self.window, (x + 1.6 * w, y - 5), "+", BLACK)
+        draw_text(self.window, (x - 2 * w, y), "-", BLACK)
         # label:
-        draw_text(self.window, (self.x - 2 * self.w, self.y - 2 * self.w),
-                  self.label, WHITE)
+        offset = len(self.label) * 30
+        draw_text(self.window, (x - offset, y - 0.5 * w), self.label, WHITE)
 
     def mouse_over(self, x, y):
         from geometry import ccw
+        # to check if cursor is pointing at one of the switch-buttons,
+        # we just test if cursor position is inside polygon, by checking if
+        # all segments are in counter-clockwise order to cursor position:
         for j, element in enumerate(self.points):
             for i, point in enumerate(element):
                 if i == len(element) - 1:
@@ -125,6 +129,33 @@ class ClampedValue(Button):
             self.value -= self.step
         super().on_click()
 
+
+class CheckButton(Button):
+    """
+    Simple checkbutton storing a single boolean value determining it's state.
+    """
+
+    def __init__(self, window, x: float, y: float, h: float, w: float,
+                 value: bool = False, function: callable = None,
+                 label: str = "Checkbutton"):
+        super().__init__(window, x, y, h, w, function=function)
+        self.value = value
+        self.label = label
+
+    def draw(self):
+        super().draw()
+        x, y, h, w = self.x, self.y, self.h, self.w
+        # tick:
+        if self.value:
+            tick = [(x - w, y), (x, y + h), (x, y + h), (x + w, y - h)]
+            draw.lines(self.window, BLACK, False, tick, 8)
+        # label:
+        offset = len(self.label) * 14
+        draw_text(self.window, (x - offset, y - 0.5 * w), self.label, WHITE)
+
+    def on_click(self):
+        self.value = not self.value
+        super().on_click()
 
 
 
