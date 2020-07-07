@@ -73,36 +73,34 @@ def timer(func):
 
 class Application:
     # to draw rays from origin to eah obstacle-corner:
-    SHOW_RAYS = True
+    show_rays = True
     # number of origins from where FOV/light polygon will be drawn. Raising this
     # variable will get very costly fast!
-    LIGHTS_COUNT = 1
+    lights_count = 1
     # type of polygon is determined by the number of edges: 3 = triangle,
     # 4 = square, 5 = pentagon, 6 = hexagon etc.
-    OBSTACLE_EDGES = 8
+    obstacle_edges = 8
     # size of obstacles and distance between them is determined by this variable
     # (smaller the size, more obstacles would be drawn!):
-    OBSTACLE_EDGE_SIZE = 100
+    obstacle_edge_size = 100
     # you can draw randomized colors FOV polygons by switching this to 1 (you
     # will need this to actually see that there are more than 1 light polygons
     # drawn):
-    RANDOM_COLORS = False
+    random_colors = False
     # decide what state of application should be displayed:
-    RUN_SIMULATION = False
+    run_simulation = False
 
     displayed_fps = [0, 0]  # total number of measures, sum of measures
 
-    def __init__(self):
-        self.lights = []
-        self.obstacles = []
-        self.options = []
-        self.run_simulation = False
+    lights = []
+    obstacles = []
+    options = []
 
     def main_loop(self):
         application.options = self.create_interactable_options()
         pointed = None
 
-        while not self.RUN_SIMULATION:
+        while not self.run_simulation:
             self.redraw_configuration_screen(self.options)
             for event in pygame.event.get():
                 event_type = event.type
@@ -119,7 +117,7 @@ class Application:
         bind_light_to_cursor = True
         self.obstacles = self.create_obstacles()
         self.lights = self.create_lights(self.obstacles)
-        while self.RUN_SIMULATION:
+        while self.run_simulation:
             self.redraw_screen(self.lights, self.obstacles)  # draw previous
             # frame
             if bind_light_to_cursor:
@@ -135,12 +133,12 @@ class Application:
                         bind_light_to_cursor = not bind_light_to_cursor
                         self.on_mouse_motion(x, y, self.lights)
                 elif event_type == pygame.QUIT:
-                    self.RUN_SIMULATION = False
+                    self.run_simulation = False
                     pygame.quit()
 
     def create_obstacles(self) -> List:
         obstacles, bounding_boxes = [], []
-        size = self.OBSTACLE_EDGE_SIZE
+        size = self.obstacle_edge_size
         for i in range(size * 2, SCREEN_W, size * 3):
             for j in range(size * 2, SCREEN_H, size * 3):
                 obstacle = self.new_obstacle(i, j)
@@ -150,8 +148,8 @@ class Application:
     def new_obstacle(self, i: float, j: float) -> List:
         """Produce obstacle (polygon) of any size and number of vertices."""
         obstacle = []
-        size = self.OBSTACLE_EDGE_SIZE
-        edges = self.OBSTACLE_EDGES
+        size = self.obstacle_edge_size
+        edges = self.obstacle_edges
         for k in range(edges):
             angle = (k - 1) * (360 // edges)
             offset = 180 // edges
@@ -168,7 +166,7 @@ class Application:
     def create_lights(self, obstacles: List) -> List:
         lights = []
         x, y = SCREEN_W // 2, SCREEN_H // 2
-        for i in range(self.LIGHTS_COUNT):
+        for i in range(self.lights_count):
             color = self.get_light_color()
             point = self.get_light_position(i, x, y)
             # noinspection PyTypeChecker
@@ -177,7 +175,7 @@ class Application:
         return lights
 
     def get_light_color(self) -> Tuple:
-        if self.RANDOM_COLORS:
+        if self.random_colors:
             randint = random.randint
             return randint(0, 255), randint(0, 255), randint(0, 255)
         else:
@@ -187,7 +185,7 @@ class Application:
         if not i:
             point = (x, y)
         else:
-            angle = i * (360 // self.LIGHTS_COUNT)
+            angle = i * (360 // self.lights_count)
             point = move_along_vector((x, y), 10, angle=angle)
         return point
 
@@ -201,7 +199,7 @@ class Application:
         functions = [self.run_application, self.change_edges_count,
             self.change_edge_size, self.toggle_rays, self.toggle_colors]
         ranges = [None, (3, 20, 1), (25, 200, 25), None, None]
-        values = ["Run", 5, 100, self.SHOW_RAYS, self.RANDOM_COLORS]
+        values = ["Run", 5, 100, self.show_rays, self.random_colors]
         labels = [None, "Edges:", "Size:", "Show rays?", "Random colors?"]
 
         for i, position in enumerate(positions):
@@ -218,19 +216,19 @@ class Application:
         return options
 
     def run_application(self):
-        self.RUN_SIMULATION = True
+        self.run_simulation = True
 
     def change_edges_count(self):
-        self.OBSTACLE_EDGES = self.options[1].value
+        self.obstacle_edges = self.options[1].value
 
     def change_edge_size(self):
-        self.OBSTACLE_EDGE_SIZE = self.options[2].value
+        self.obstacle_edge_size = self.options[2].value
 
     def toggle_rays(self):
-        self.SHOW_RAYS = self.options[3].value
+        self.show_rays = self.options[3].value
 
     def toggle_colors(self):
-        self.RANDOM_COLORS = self.options[4].value
+        self.random_colors = self.options[4].value
 
     def redraw_configuration_screen(self, clickable_items: List):
         """
@@ -288,7 +286,7 @@ class Application:
                 draw_polygon(window, light.color, light.light_polygon)
             x, y = light.origin
             polygon = light.light_polygon
-            if self.SHOW_RAYS:
+            if self.show_rays:
                 for i, r in enumerate(polygon):
                     color = WHITE if i else RED
                     draw_line(window, color, (x, y), (r[0], r[1]))
@@ -299,7 +297,7 @@ class Application:
         if len(lights) > 1:
             for i, light in enumerate(lights):
                 if i:
-                    angle = i * (360 // self.LIGHTS_COUNT)
+                    angle = i * (360 // self.lights_count)
                     point = move_along_vector((int(x), int(y)), 15, angle=angle)
                     light.move_to(point[0], point[1])
 

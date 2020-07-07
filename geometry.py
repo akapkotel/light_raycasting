@@ -4,7 +4,7 @@
 #  the top vertex of closer triangle is omitted and an obstacle is cut.
 
 import math
-from typing import List, Tuple, Sequence, Dict, Optional, Iterator
+from typing import List, Tuple, Set, Sequence, Dict, Optional, Iterator
 
 from main import SCREEN_H, SCREEN_W
 
@@ -111,7 +111,7 @@ def cross_product(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     return a[0] * b[0] - b[1] * a[1]
 
 
-def ccw(points_list: Sequence[Tuple[float]]) -> bool:
+def ccw(points_list: Sequence[Tuple[float, float]]) -> bool:
     """
     Check if sequence of points is oriented in clockwise or counterclockwise
     order.
@@ -123,9 +123,8 @@ def ccw(points_list: Sequence[Tuple[float]]) -> bool:
 
 def are_points_in_line(a: Tuple[float, float],
                        b: Tuple[float, float],
-                       c: Tuple[float, float]):
-    return -EPSILON < (
-            distance(a, c) + distance(c, b) - distance(a, b)) < EPSILON
+                       c: Tuple[float, float]) -> bool:
+    return -EPSILON < (distance(a, c) + distance(c, b) - distance(a, b)) < EPSILON
 
 
 def get_polygon_bounding_box(points_list: List[Tuple]) -> List[Tuple]:
@@ -217,13 +216,13 @@ class Light:
         self.walls_centers = self.calculate_walls_centers()
 
         # we need obstacle's corners to emit rays from origin to them:
-        self.corners_open_walls = {}
-        self.corners_close_walls = {}
+        self.corners_open_walls: Dict = {}
+        self.corners_close_walls: Dict = {}
         self.corners = self.find_corners()
         self.border_corners = self.get_border_corners()
 
         # this would be used to draw our visible/lit-up area:
-        self.light_polygon = []
+        self.light_polygon: List = []
 
     def move_to(self, x, y):
         self.origin = x, y
@@ -266,7 +265,7 @@ class Light:
 
     def find_corners(self) -> List[Tuple[float, float]]:
         walls = self.walls
-        corners = []
+        corners: List = []
         for wall in walls:
             for vertex in wall:
                 if vertex not in corners:
@@ -343,8 +342,8 @@ class Light:
         :param walls: List -- all walls which can block vision/light
         :return: List -- clockwise-ordered points of visibility polygon
         """
-        colliding = set()  # rays which intersects any wall
-        offset_rays = []  # rays sweeping around obstacle's corners
+        colliding: Set = set()  # rays which intersects any wall
+        offset_rays: List = []  # rays sweeping around obstacle's corners
         corners_open_walls = self.corners_open_walls
         corners_close_walls = self.corners_close_walls
         for wall in walls:
@@ -369,7 +368,8 @@ class Light:
         return [r for r in rays if r not in colliding] + offset_rays
 
     @staticmethod
-    def filter_rays(origin: Tuple, rays: List, wall: Tuple) -> Iterator:
+    def filter_rays(origin: Tuple[float, float],
+                    rays: List[Tuple[float, float]], wall: Tuple) -> Iterator:
         """
         Find rays which could intersect with this wall, eg.: orientation of
         their ending to wall starting vertex is clockwise and to ending
@@ -383,7 +383,9 @@ class Light:
         return filter(lambda r: ccw((origin, wall[1], r[1])) and
                       not ccw((origin, wall[0], r[1])), rays)
 
-    def create_rays_for_corners(self, origin: Tuple, corners: List) -> List:
+    def create_rays_for_corners(self,
+                                origin: Tuple[float, float],
+                                corners: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
         """
         Create a 'ray' connecting origin with each corner (obstacle vertex) on
         the screen. Ray is a tuple of two (x, y) coordinates used later to
@@ -397,8 +399,8 @@ class Light:
         corners_close_walls = self.corners_close_walls
         border_corners = self.border_corners
 
-        rays = []
-        excluded = set()
+        rays: List = []
+        excluded: Set = set()
         angles = [calculate_angle(origin, corner) for corner in corners]
         distances = [distance(origin, corner) for corner in corners]
         for i, corner in enumerate(corners):
