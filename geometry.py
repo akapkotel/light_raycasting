@@ -205,21 +205,20 @@ class Light:
         self.origin = x, y  # position of the light/observer
         self.color = color
 
-        # objects considered as blocking FOV/light. Each obstacle is a
-        # polygon consisting a list of points - it's vertices.
-        self.obstacles = obstacles
-
         # our algorithm does not check against whole polygons-obstacles, but
         # against each of their edges:
         self.border_walls = self.screen_borders_to_walls()
-        self.walls = self.border_walls + self.obstacles_to_walls()
+        # objects considered as blocking FOV/light. Each obstacle is a
+        # polygon consisting a list of points - it's vertices.
+        self.walls = self.border_walls + self.obstacles_to_walls(obstacles)
         self.walls_centers = self.calculate_walls_centers()
 
         # we need obstacle's corners to emit rays from origin to them:
         self.corners_open_walls: Dict = {}
         self.corners_close_walls: Dict = {}
         self.corners = self.find_corners()
-        self.border_corners = self.get_border_corners()
+        self.corners_set = set(self.corners)  # to fast search corners
+        self.border_corners = {(SCREEN_H, 0), (SCREEN_H, SCREEN_W), (0, SCREEN_W), (0, 0)}
 
         # this would be used to draw our visible/lit-up area:
         self.light_polygon: List = []
@@ -241,7 +240,8 @@ class Light:
         west_border = ((0, 0), (SCREEN_H, 0))
         return north_border, east_border, south_border, west_border
 
-    def obstacles_to_walls(self) -> Tuple:
+    @staticmethod
+    def obstacles_to_walls(obstacles: List) -> Tuple:
         """
         Each obstacle should be a polygon, which is a list of segments
         represented by tuples (x, y) ordered counter-clockwise. We detect
@@ -250,7 +250,7 @@ class Light:
         visibility rays.
         """
         walls = []
-        for obstacle in self.obstacles:
+        for obstacle in obstacles:
             vertex_count = len(obstacle)
 
             for i in range(vertex_count):
@@ -274,16 +274,10 @@ class Light:
                     self.corners_open_walls[vertex] = wall
                 else:
                     self.corners_close_walls[vertex] = wall
-        print(corners)
         return corners
 
-    @staticmethod
-    def get_border_corners() -> Tuple:
-        return (SCREEN_H, 0), (SCREEN_H, SCREEN_W), (0, SCREEN_W), (0, 0)
-
     def calculate_walls_centers(self) -> Dict:
-        centers = {}
-
+        centers: Dict = {}
         for wall in self.walls + self.border_walls:
             half_length = distance(*wall) / 2
             direction = calculate_angle(*wall)
@@ -302,7 +296,7 @@ class Light:
         corners.sort(key=lambda c: calculate_angle(origin, c))
         walls = self.sort_walls(origin)
         rays = self.create_rays_for_corners(origin, corners)
-        rays = self.collide_rays_w_walls(corners, origin, rays, walls)
+        rays = self.collide_rays_w_walls(origin, rays, walls)
         # need to sort rays by their ending angle again because offset_rays
         # are unsorted and pushed at the end of the list:
         rays.sort(key=lambda r: calculate_angle(origin, r[1]))
@@ -328,8 +322,7 @@ class Light:
         walls.sort(key=lambda w: w in self.border_walls)
         return walls
 
-    def collide_rays_w_walls(self, corners: List[Tuple],
-                             origin: Tuple[float, float],
+    def collide_rays_w_walls(self, origin: Tuple[float, float],
                              rays: List[Tuple],
                              walls: List[Tuple]) -> List[Tuple]:
         """
@@ -342,6 +335,7 @@ class Light:
         :param walls: List -- all walls which can block vision/light
         :return: List -- clockwise-ordered points of visibility polygon
         """
+        corners_set = self.corners_set  # to fast search
         colliding: Set = set()  # rays which intersects any wall
         offset_rays: List = []  # rays sweeping around obstacle's corners
         corners_open_walls = self.corners_open_walls
@@ -350,21 +344,18 @@ class Light:
             for ray in self.filter_rays(origin, rays, wall):
                 if ray in colliding:
                     continue
-                ray_end_point = ray[1]
-                # check if it is ray shot at obstacle corner:
-                both_walls = None
-                if ray_end_point in corners:
-                    ray_opens = corners_open_walls[ray_end_point]
-                    ray_closes = corners_close_walls[ray_end_point]
-                    both_walls = {ray_opens, ray_closes}
-
                 if intersects(ray, wall) or intersects(wall, ray):
-                    if both_walls is None:  # it's additional around-corner ray
+                    # check if it is ray shot at obstacle corner:
+                    ray_end_point = ray[1]
+                    if ray_end_point in corners_set:
+                        ray_opens = corners_open_walls[ray_end_point]
+                        ray_closes = corners_close_walls[ray_end_point]
+                        if wall not in {ray_opens, ray_closes}:
+                            colliding.add(ray)
+                    else:  # it's additional around-corner ray
                         colliding.add(ray)
                         new_ray_end = get_intersection(*ray, *wall)
                         offset_rays.append((origin, new_ray_end))
-                    elif wall not in both_walls:
-                        colliding.add(ray)
         return [r for r in rays if r not in colliding] + offset_rays
 
     @staticmethod

@@ -15,8 +15,7 @@ import pygame
 import pygame.freetype
 
 from options_screen import (Button, CheckButton, ClampedValue, GREEN, BLACK,
-                            WHITE)
-
+    WHITE)
 
 # to profile simulation on your machine, set this to True:
 PROFILE = False
@@ -41,6 +40,7 @@ draw_line = draw.line
 draw_circle = draw.circle
 draw_polygon = draw.polygon
 draw_text = FONT.render_to
+randint = random.randint
 
 
 def timer(func):
@@ -68,6 +68,7 @@ def timer(func):
         fr = f"{func.__name__} finished in {total_time:.4f} secs. FPS: {fps}"
         print(fr)
         return result
+
     return wrapper
 
 
@@ -91,15 +92,16 @@ class Application:
     run_simulation = False
 
     displayed_fps = [0, 0]  # total number of measures, sum of measures
+    # these lists are populated at the begining of simulation:
+    lights: List
+    obstacles: List
+    options: List
 
-    lights = []
-    obstacles = []
-    options = []
+    def __init__(self):
+        self.options = self.create_interactable_options()
 
     def main_loop(self):
-        application.options = self.create_interactable_options()
         pointed = None
-
         while not self.run_simulation:
             self.redraw_configuration_screen(self.options)
             for event in pygame.event.get():
@@ -164,7 +166,7 @@ class Application:
             light.update_visible_polygon()
 
     def create_lights(self, obstacles: List) -> List:
-        lights = []
+        lights: List = []
         x, y = SCREEN_W // 2, SCREEN_H // 2
         for i in range(self.lights_count):
             color = self.get_light_color()
@@ -174,14 +176,13 @@ class Application:
             lights.append(light)
         return lights
 
-    def get_light_color(self) -> Tuple:
+    def get_light_color(self) -> Tuple[float, float, float]:
         if self.random_colors:
-            randint = random.randint
             return randint(0, 255), randint(0, 255), randint(0, 255)
         else:
             return LIGHT
 
-    def get_light_position(self, i: int, x: float, y: float) -> Tuple:
+    def get_light_position(self, i: int, x: float, y: float) -> Tuple[float, float]:
         if not i:
             point = (x, y)
         else:
@@ -193,11 +194,13 @@ class Application:
     def create_interactable_options(self):
         options = []
         p = (SCREEN_H / 2, SCREEN_W / 2)  # basic position to override
-        positions = [(p[0] + 300, p[1]), (p[0], p[1] - 100), (p[0], p[1] - 200),
-            (p[0], p[1] - 300), (p[0], p[1] - 400)]
+        positions = [(p[0] + 300, p[1]), (p[0], p[1] - 100),
+                     (p[0], p[1] - 200),
+                     (p[0], p[1] - 300), (p[0], p[1] - 400)]
         types = [Button, ClampedValue, ClampedValue, CheckButton, CheckButton]
         functions = [self.run_application, self.change_edges_count,
-            self.change_edge_size, self.toggle_rays, self.toggle_colors]
+                     self.change_edge_size, self.toggle_rays,
+                     self.toggle_colors]
         ranges = [None, (3, 20, 1), (25, 200, 25), None, None]
         values = ["Run", 5, 100, self.show_rays, self.random_colors]
         labels = [None, "Edges:", "Size:", "Show rays?", "Random colors?"]
@@ -205,10 +208,12 @@ class Application:
         for i, position in enumerate(positions):
             if types[i] == ClampedValue:
                 _min, _max, step = ranges[i]
-                b = ClampedValue(window, *position, 25, 25, values[i], _min, _max,
+                b = ClampedValue(window, *position, 25, 25, values[i], _min,
+                                 _max,
                                  step, functions[i], labels[i])
             elif types[i] == CheckButton:
-                b = CheckButton(window, *position, 15, 15, values[i], functions[i],
+                b = CheckButton(window, *position, 15, 15, values[i],
+                                functions[i],
                                 labels[i])
             else:
                 b = Button(window, *position, 25, 25, values[i], functions[i])
@@ -282,10 +287,10 @@ class Application:
 
     def draw_light(self, lights: List):
         for light in lights:
-            if len(light.light_polygon) > 2:
-                draw_polygon(window, light.color, light.light_polygon)
-            x, y = light.origin
             polygon = light.light_polygon
+            if len(polygon) > 2:
+                draw_polygon(window, light.color, polygon)
+            x, y = light.origin
             if self.show_rays:
                 for i, r in enumerate(polygon):
                     color = WHITE if i else RED
@@ -298,7 +303,8 @@ class Application:
             for i, light in enumerate(lights):
                 if i:
                     angle = i * (360 // self.lights_count)
-                    point = move_along_vector((int(x), int(y)), 15, angle=angle)
+                    point = move_along_vector((int(x), int(y)), 15,
+                                              angle=angle)
                     light.move_to(point[0], point[1])
 
     @staticmethod
