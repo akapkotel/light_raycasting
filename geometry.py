@@ -1,12 +1,7 @@
 #!/usr/bin/env python
-"""
-Bunch of methods for 2-dimensional and 3-dimensional meshes calculations,
-especially speeds, positions, paths and level-topography-handling.
-
-TODO: fix issue #1 with case when obstacles are triangles and two top-vertices
-of obstacles and origin are placed in-line horizontally - the top vertex of
-closer triangle is omitted and an obstacle is cut.
-"""
+# TODO: fix issue #1 with case when obstacles are triangles and two
+#  top-vertices of obstacles and origin are placed in-line horizontally -
+#  the top vertex of closer triangle is omitted and an obstacle is cut.
 
 import math
 from typing import List, Tuple, Sequence, Dict, Optional, Iterator
