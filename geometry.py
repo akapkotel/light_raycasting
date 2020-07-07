@@ -264,10 +264,9 @@ class Light:
                 walls.append(wall)
         return tuple(walls)
 
-    def find_corners(self) -> List:
+    def find_corners(self) -> List[Tuple[float, float]]:
         walls = self.walls
         corners = []
-
         for wall in walls:
             for vertex in wall:
                 if vertex not in corners:
@@ -276,6 +275,7 @@ class Light:
                     self.corners_open_walls[vertex] = wall
                 else:
                     self.corners_close_walls[vertex] = wall
+        print(corners)
         return corners
 
     @staticmethod
