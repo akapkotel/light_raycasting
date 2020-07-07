@@ -14,9 +14,6 @@ from typing import List, Tuple, Sequence, Dict, Optional, Iterator
 from main import SCREEN_H, SCREEN_W
 
 EPSILON = 0.05
-UL, UR, LL, LR = "UL", "UR", "LL", "LR"
-UPPER, LOWER, LEFT, RIGHT, DIAGONAL = "UPPER", "LOWER", "LEFT", "RIGHT", "DIAG"
-VERTICALLY, HORIZONTALLY = "VERTICALLY", "HORIZONTALLY"
 degrees = math.degrees
 hypotenuse = math.hypot
 
