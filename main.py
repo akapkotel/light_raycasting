@@ -324,9 +324,12 @@ if __name__ == "__main__":
     if PROFILE:
         profiler = cProfile.Profile()
         profiler.enable()
+
     application.main_loop()
+
     if PROFILE:
         # noinspection PyUnboundLocalVariable
         profiler.disable()
         stats = pstats.Stats(profiler).sort_stats("cumtime")
         stats.print_stats(20)
+

@@ -47,7 +47,7 @@ def calculate_angle(start: Tuple, end: Tuple) -> float:
     :return: float -- degrees in range 0-360.
     """
     radians = -math.atan2(end[0] - start[0], end[1] - start[1])
-    return degrees(radians)
+    return degrees(radians) % 360
 
 
 def move_along_vector(start: Tuple[float, float],
@@ -345,8 +345,8 @@ class Light:
                 if ray in colliding:
                     continue
                 if intersects(ray, wall) or intersects(wall, ray):
-                    # check if it is ray shot at obstacle corner:
                     ray_end_point = ray[1]
+                    # check if it is ray shot at obstacle corner:
                     if ray_end_point in corners_set:
                         ray_opens = corners_open_walls[ray_end_point]
                         ray_closes = corners_close_walls[ray_end_point]
@@ -403,41 +403,38 @@ class Light:
                 continue
 
             angle = angles[i]
-            max_distance = distances[i]
-
-            corner_starts_wall = corners_open_walls[corner]
-            corner_ends_wall = corners_close_walls[corner]
-            if ccw((origin, *corner_starts_wall)):
-                max_angle = angle
-            else:
-                max_angle = calculate_angle(origin, corner_starts_wall[1])
-            if ccw((origin, corner_ends_wall[1], corner_ends_wall[0])):
-                min_angle = calculate_angle(origin, corner_ends_wall[0])
-            else:
-                min_angle = angle
-
-            for j, another_corner in enumerate(corners):
-                if distances[j] > max_distance:
-                    another_angle = angles[j]
-                    if min_angle < another_angle < max_angle:
-                        excluded.add(another_corner)
-                    elif min_angle > max_angle:
-                        if min_angle < another_angle < 360:
-                            excluded.add(another_corner)
 
             # additional rays to search behind the corners:
-            end_a = move_along_vector(origin, 1500,
-                                      angle=-angle + EPSILON)
-            end_b = move_along_vector(origin, 1500,
-                                      angle=-angle - EPSILON)
             offset_ray_a, offset_ray_b = None, None
 
-            if ccw((origin, corner, corner_starts_wall[1])):
+            wall_start, wall_end = corners_open_walls[corner]
+            if ccw((origin, corner, wall_end)):
+                end_b = move_along_vector(origin, 1500, angle=-angle - EPSILON)
                 offset_ray_a = (origin, end_b)
-            if not ccw((origin, corner, corner_ends_wall[0])):
-                offset_ray_b = (origin, end_a)
+                max_angle = angle
+            else:
+                max_angle = calculate_angle(origin, wall_end)
 
-            for r in (offset_ray_a, (origin, corner), offset_ray_b):
+            wall_start, wall_end = corners_close_walls[corner]
+            if not ccw((origin, corner, wall_start)):
+                end_a = move_along_vector(origin, 1500, angle=-angle + EPSILON)
+                offset_ray_b = (origin, end_a)
+                min_angle = angle
+            else:
+                min_angle = calculate_angle(origin, wall_start)
+
+            for r in [offset_ray_a, (origin, corner), offset_ray_b]:
                 if r is not None:
                     rays.append(r)
+            # we 'hide' all other corners which are 'behind' visible walls
+            # opened and closed by this corner:
+            for j, another_corner in enumerate(corners):
+                if distances[j] > distances[i]:
+                    another_angle = angles[j]
+                    if min_angle > max_angle:
+                        if min_angle < another_angle < 360:
+                            if max_angle < another_angle:
+                                excluded.add(another_corner)
+                    if min_angle < another_angle < max_angle:
+                        excluded.add(another_corner)
         return rays
