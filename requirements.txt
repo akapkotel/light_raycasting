@@ -1,6 +1,6 @@
 pygame==1.9.6
 future==0.17.1
 numpy==1.16.4
-Pillow==8.2.0
+Pillow==8.3.2
 pyglet==1.4.0b1
 pyglet-ffmpeg2==0.1.12
